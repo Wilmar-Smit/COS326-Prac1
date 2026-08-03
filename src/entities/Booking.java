@@ -1,6 +1,5 @@
 package entities;
 
-import java.awt.print.Book;
 import java.io.Serializable;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -11,6 +10,8 @@ import javax.persistence.ManyToOne;
 
 @Entity
 public class Booking implements Serializable {
+
+
 
     @Id
     @GeneratedValue
