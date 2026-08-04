@@ -3,6 +3,7 @@ package UI;
 import dev.tamboui.layout.Constraint;
 import dev.tamboui.layout.Layout;
 import dev.tamboui.layout.Padding;
+import dev.tamboui.layout.Rect;
 import dev.tamboui.style.Color;
 import dev.tamboui.style.Style;
 import dev.tamboui.terminal.Frame;
@@ -55,10 +56,7 @@ public class CreateResearcher {
 
     public boolean handleEvent(Event event) {
         if (event instanceof KeyEvent keyEvent) {
-            if (
-                keyEvent.code() == KeyCode.TAB ||
-                keyEvent.code() == KeyCode.DOWN
-            ) {
+            if (keyEvent.code() == KeyCode.DOWN) {
                 focusedIndex = (focusedIndex + 1) % 4;
                 return true;
             } else if (keyEvent.code() == KeyCode.UP) {
@@ -104,9 +102,7 @@ public class CreateResearcher {
         return false;
     }
 
-    public void render(Frame frame) {
-        var area = frame.area();
-
+    public void render(Frame frame, Rect area) {
         var container = Block.builder()
             .title("Create Researcher")
             .borders(Borders.ALL)
