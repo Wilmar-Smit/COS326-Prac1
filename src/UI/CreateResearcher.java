@@ -77,7 +77,6 @@ public class CreateResearcher {
                 Researcher::getDepartment
             );
 
-        // Add all widgets to the list
         widgets.add(nameInput);
         widgets.add(emailInput);
         widgets.add(departmentInput);
@@ -188,7 +187,6 @@ public class CreateResearcher {
             if (focusedIndex < widgets.size()) {
                 boolean handled = widgets.get(focusedIndex).handleKey(keyEvent);
                 if (focusedIndex == 3 && handled) {
-                    // filterID refresh
                     refreshTableData();
                 }
                 return handled;

@@ -8,7 +8,6 @@ import dev.tamboui.style.Color;
 import dev.tamboui.style.Style;
 import dev.tamboui.terminal.Frame;
 import dev.tamboui.tui.event.Event;
-import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.MouseButton;
 import dev.tamboui.tui.event.MouseEvent;
@@ -19,6 +18,7 @@ import dev.tamboui.widgets.select.Select;
 import dev.tamboui.widgets.select.SelectState;
 import entities.Equipment;
 import factories.EquipmentManager;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -51,7 +51,6 @@ public class CreateEquipment {
         Equipment.WORKING,
         Equipment.OUT_OF_SERVICE
     );
-
     private final Select statusSelect = Select.builder()
         .leftIndicator("< ")
         .rightIndicator(" >")
@@ -60,23 +59,23 @@ public class CreateEquipment {
         .build();
 
     // Buttons
-    private final Button createEQ = new Button(" Create Equipment ", () ->
-        createEquipmentFunction()
+    private final Button createEQ = new Button(
+        " Create Equipment ",
+        this::createEquipmentFunction
     );
-
     private final Button createNewEquipmentBtn = new Button(
         " Clear and create new equipment ",
-        () -> CreateNewEquipment()
+        this::CreateNewEquipment
     );
-
     private final Button deleteEquipmentBtn = new Button(
         " Delete equipment ",
-        () -> deleteEquipment()
+        this::deleteEquipment
     );
 
     // Table
     private final TableView<Equipment> equipmentTable;
 
+    private final List<UI> widgets = new ArrayList<>();
     private int focusedIndex = 0;
     private Rect tableArea = new Rect(0, 0, 0, 0);
 
@@ -84,8 +83,8 @@ public class CreateEquipment {
         equipment = new Equipment();
 
         equipmentTable = new TableView<Equipment>("Existing Equipment")
-            .addColumn("ID", Constraint.length(8), e ->
-                String.valueOf(e.getId())
+            .addColumn("ID", Constraint.length(8), eq ->
+                String.valueOf(eq.getId())
             )
             .addColumn("Name", Constraint.percentage(30), Equipment::getName)
             .addColumn(
@@ -100,6 +99,16 @@ public class CreateEquipment {
             )
             .addColumn("Status", Constraint.fill(), Equipment::getStatus);
 
+        // Add widgets to list
+        widgets.add(nameInput);
+        widgets.add(categoryInput);
+        widgets.add(purchaseDate);
+        widgets.add(replaceCostInput);
+        widgets.add(filterID);
+        widgets.add(createEQ);
+        widgets.add(createNewEquipmentBtn);
+        widgets.add(deleteEquipmentBtn);
+
         refreshTableData();
     }
 
@@ -111,20 +120,15 @@ public class CreateEquipment {
         if (!filterText.isEmpty()) {
             try {
                 Long searchId = Long.parseLong(filterText);
-
                 Equipment match = manager.searchEquipment(searchId);
-
-                if (match != null) {
-                    equipmentTable.setItems(List.of(match));
-                } else {
-                    equipmentTable.setItems(Collections.emptyList());
-                }
+                equipmentTable.setItems(
+                    match != null ? List.of(match) : Collections.emptyList()
+                );
             } catch (NumberFormatException e) {
                 equipmentTable.setItems(Collections.emptyList());
             }
         } else {
-            List<Equipment> equipmentList = manager.findAll();
-            equipmentTable.setItems(equipmentList);
+            equipmentTable.setItems(manager.findAll());
         }
     }
 
@@ -132,7 +136,6 @@ public class CreateEquipment {
         if (equipment != null && equipment.getId() != null) {
             EquipmentManager manager = new EquipmentManager();
             manager.delete(equipment);
-
             CreateNewEquipment();
             refreshTableData();
         }
@@ -157,7 +160,6 @@ public class CreateEquipment {
                 String.valueOf(selected.getReplaceCost())
             );
 
-            // Sync status selection if needed
             if (Equipment.OUT_OF_SERVICE.equals(selected.getStatus())) {
                 statusState.selectNext();
             } else {
@@ -220,108 +222,59 @@ public class CreateEquipment {
     }
 
     public boolean handleEvent(Event event) {
-        if (errorModal.isVisible()) {
-            return errorModal.handleEvent(event);
-        }
+        if (errorModal.isVisible()) return errorModal.handleEvent(event);
 
         if (event instanceof KeyEvent keyEvent) {
-            if (focusedIndex == 9) {
-                if (keyEvent.code() == KeyCode.TAB) {
-                    focusedIndex = 0;
+            if (focusedIndex < widgets.size()) {
+                boolean handled = widgets.get(focusedIndex).handleKey(keyEvent);
+                if (focusedIndex == 4) {
+                    // status select
+                    if (
+                        keyEvent.code().name().equals("LEFT")
+                    ) statusState.selectPrevious();
+                    else if (
+                        keyEvent.code().name().equals("RIGHT")
+                    ) statusState.selectNext();
                     return true;
                 }
-                boolean handled = equipmentTable.handleEvent(event);
-                if (handled) {
-                    populateFieldsFromSelectedRow();
-                    return true;
-                }
-            }
-
-            if (keyEvent.code() == KeyCode.DOWN) {
-                focusedIndex = (focusedIndex + 1) % 10;
-                if (focusedIndex == 9) {
-                    populateFieldsFromSelectedRow();
-                }
-                return true;
-            } else if (keyEvent.code() == KeyCode.UP) {
-                focusedIndex = (focusedIndex + 9) % 10;
-                if (focusedIndex == 9) {
-                    populateFieldsFromSelectedRow();
-                }
-                return true;
-            }
-
-            if (focusedIndex == 0) {
-                return nameInput.handleKey(keyEvent);
-            } else if (focusedIndex == 1) {
-                return categoryInput.handleKey(keyEvent);
-            } else if (focusedIndex == 2) {
-                return purchaseDate.handleKey(keyEvent);
-            } else if (focusedIndex == 3) {
-                return replaceCostInput.handleKey(keyEvent);
-            } else if (focusedIndex == 4) {
-                if (keyEvent.code() == KeyCode.LEFT) {
-                    statusState.selectPrevious();
-                    return true;
-                } else if (keyEvent.code() == KeyCode.RIGHT) {
-                    statusState.selectNext();
-                    return true;
-                }
-            } else if (focusedIndex == 5) {
-                boolean handled = filterID.handleKey(keyEvent);
-                if (handled) {
+                if (focusedIndex == 5 && handled) {
+                    // filterID
                     refreshTableData();
                 }
                 return handled;
-            } else if (focusedIndex == 6) {
-                return createEQ.handleKey(keyEvent);
-            } else if (focusedIndex == 7) {
-                return createNewEquipmentBtn.handleKey(keyEvent);
-            } else if (focusedIndex == 8) {
-                return deleteEquipmentBtn.handleKey(keyEvent);
+            } else if (focusedIndex == widgets.size()) {
+                boolean handled = equipmentTable.handleKey(keyEvent);
+                if (handled) populateFieldsFromSelectedRow();
+                return handled;
             }
-        } else if (event instanceof MouseEvent mouseEvent) {
-            if (
-                mouseEvent.button() == MouseButton.LEFT && mouseEvent.isClick()
-            ) {
-                int mx = mouseEvent.x();
-                int my = mouseEvent.y();
-
-                if (nameInput.isClicked(mx, my)) {
-                    focusedIndex = 0;
-                    return true;
-                } else if (categoryInput.isClicked(mx, my)) {
-                    focusedIndex = 1;
-                    return true;
-                } else if (purchaseDate.isClicked(mx, my)) {
-                    focusedIndex = 2;
-                    return true;
-                } else if (replaceCostInput.isClicked(mx, my)) {
-                    focusedIndex = 3;
-                    return true;
-                } else if (filterID.isClicked(mx, my)) {
-                    focusedIndex = 5;
-                    return true;
-                } else if (createEQ.isClicked(mx, my)) {
-                    focusedIndex = 6;
-                    createEQ.click();
-                    return true;
-                } else if (createNewEquipmentBtn.isClicked(mx, my)) {
-                    focusedIndex = 7;
-                    createNewEquipmentBtn.click();
-                    return true;
-                } else if (deleteEquipmentBtn.isClicked(mx, my)) {
-                    focusedIndex = 8;
-                    deleteEquipmentBtn.click();
-                    return true;
-                } else if (equipmentTable.isClicked(mx, my, tableArea)) {
-                    focusedIndex = 9;
-                    int rowIndex = equipmentTable.getRowIndexAt(my, tableArea);
-                    if (rowIndex != -1) {
-                        populateFieldsFromSelectedRow();
-                    }
+        } else if (
+            event instanceof MouseEvent mouseEvent &&
+            mouseEvent.button() == MouseButton.LEFT &&
+            mouseEvent.isClick()
+        ) {
+            for (int i = 0; i < widgets.size(); i++) {
+                UI w = widgets.get(i);
+                if (w.isClicked(mouseEvent.x(), mouseEvent.y())) {
+                    focusedIndex = i;
+                    if (w instanceof Button) ((Button) w).click();
                     return true;
                 }
+            }
+
+            if (
+                equipmentTable.isClicked(
+                    mouseEvent.x(),
+                    mouseEvent.y(),
+                    tableArea
+                )
+            ) {
+                focusedIndex = widgets.size();
+                int rowIndex = equipmentTable.getRowIndexAt(
+                    mouseEvent.y(),
+                    tableArea
+                );
+                if (rowIndex != -1) populateFieldsFromSelectedRow();
+                return true;
             }
         }
         return false;
@@ -358,6 +311,7 @@ public class CreateEquipment {
         purchaseDate.render(frame, rows.get(2), focusedIndex == 2);
         replaceCostInput.render(frame, rows.get(3), focusedIndex == 3);
 
+        // Status select block
         var statusArea = rows.get(4);
         var statusBlock = Block.builder()
             .title(" Status (Left/Right Arrows) ")
@@ -383,7 +337,7 @@ public class CreateEquipment {
         deleteEquipmentBtn.render(frame, rows.get(8), focusedIndex == 8);
 
         tableArea = rows.get(9);
-        equipmentTable.render(frame, tableArea, focusedIndex == 9);
+        equipmentTable.render(frame, tableArea, focusedIndex == widgets.size());
 
         if (errorModal.isVisible()) errorModal.render(frame, area);
     }
