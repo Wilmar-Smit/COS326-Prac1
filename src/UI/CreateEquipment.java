@@ -77,7 +77,6 @@ public class CreateEquipment {
     // Table
     private final TableView<Equipment> equipmentTable;
 
-    // 0..3: Inputs (Name, Category, Date, Cost), 4: Status Select, 5: Filter Input, 6..8: Buttons (Create/Update, Clear, Delete), 9: Table
     private int focusedIndex = 0;
     private Rect tableArea = new Rect(0, 0, 0, 0);
 
@@ -181,7 +180,12 @@ public class CreateEquipment {
         }
 
         equipment.setCategory(categoryInput.getValue());
-        equipment.setPurchaseDate(purchaseDate.getValue());
+        if (purchaseDate.getValue().matches("\\d{4}/\\d{2}/\\d{2}")) {
+            equipment.setPurchaseDate(purchaseDate.getValue());
+        } else {
+            errorModal.showError("Date format must be yyyy/mm/dd");
+            dontadd = true;
+        }
 
         try {
             double cost = Double.parseDouble(replaceCostInput.getValue());
@@ -197,9 +201,7 @@ public class CreateEquipment {
                 manager.save(equipment);
                 createEQ.setLabel(" Update equipment ");
             } else {
-                // TODO: Add update call here if separate from save
-                // Example: manager.update(equipment);
-                manager.save(equipment);
+                manager.update(equipment);
             }
         }
 
