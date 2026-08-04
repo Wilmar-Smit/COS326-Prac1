@@ -1,6 +1,5 @@
 package validators;
 
-import entities.Booking;
 import entities.Equipment;
 import entities.Researcher;
 
