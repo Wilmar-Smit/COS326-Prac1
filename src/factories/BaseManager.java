@@ -12,7 +12,7 @@ public abstract class BaseManager<T> {
         this.entityClass = entityClass;
     }
 
-    public void Save(T entity) {
+    public void save(T entity) {
         EntityManager man = DbFactory.createManager();
         EntityTransaction tx = man.getTransaction();
 

@@ -8,11 +8,12 @@ LIB_DIR = lib
 CP = "$(LIB_DIR)/*:$(BIN_DIR)"
 AGENT = $(LIB_DIR)/objectdb.jar
 
-SRCS = $(wildcard $(SRC_DIR)/*.java)
+# Find all .java files recursively in SRC_DIR and all subdirectories
+SRCS = $(shell find $(SRC_DIR) -name "*.java")
 
 all: compile
 
-compile: $(SRCS)
+compile:
 	@mkdir -p $(BIN_DIR)
 	$(JC) -cp "$(LIB_DIR)/*" -d $(BIN_DIR) $(SRCS)
 
