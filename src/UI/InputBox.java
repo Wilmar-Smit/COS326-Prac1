@@ -11,7 +11,7 @@ import dev.tamboui.widgets.block.Borders;
 import dev.tamboui.widgets.input.TextInput;
 import dev.tamboui.widgets.input.TextInputState;
 
-public class InputBox {
+public class InputBox implements UI{
 
     private final TextInputState state;
     private final String label;

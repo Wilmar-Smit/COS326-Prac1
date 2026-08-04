@@ -14,23 +14,32 @@ import dev.tamboui.widgets.block.Borders;
 import dev.tamboui.widgets.table.Row;
 import dev.tamboui.widgets.table.Table;
 import dev.tamboui.widgets.table.TableState;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
-public class TableView<T> {
+public class TableView<T> implements UI {
 
     public static class Column<T> {
+
         private final String header;
         private final Constraint width;
         private final Function<T, String> valueExtractor;
 
-        public Column(String header, Constraint width, Function<T, String> valueExtractor) {
+        public Column(
+            String header,
+            Constraint width,
+            Function<T, String> valueExtractor
+        ) {
             this.header = header;
             this.width = width;
             this.valueExtractor = valueExtractor;
         }
+    }
+
+    @Override
+    public boolean isClicked(int x, int y) {
+        return false;
     }
 
     private final String title;
@@ -43,7 +52,11 @@ public class TableView<T> {
         this.state.select(0);
     }
 
-    public TableView<T> addColumn(String header, Constraint width, Function<T, String> valueExtractor) {
+    public TableView<T> addColumn(
+        String header,
+        Constraint width,
+        Function<T, String> valueExtractor
+    ) {
         columns.add(new Column<>(header, width, valueExtractor));
         return this;
     }
@@ -69,8 +82,12 @@ public class TableView<T> {
     }
 
     public boolean isClicked(int mouseX, int mouseY, Rect layoutArea) {
-        return mouseX >= layoutArea.x() && mouseX < layoutArea.x() + layoutArea.width() &&
-               mouseY >= layoutArea.y() && mouseY < layoutArea.y() + layoutArea.height();
+        return (
+            mouseX >= layoutArea.x() &&
+            mouseX < layoutArea.x() + layoutArea.width() &&
+            mouseY >= layoutArea.y() &&
+            mouseY < layoutArea.y() + layoutArea.height()
+        );
     }
 
     public int getRowIndexAt(int mouseY, Rect layoutArea) {
@@ -83,40 +100,52 @@ public class TableView<T> {
         return -1;
     }
 
-    public boolean handleEvent(Event event) {
+    @Override
+    public boolean handleKey(KeyEvent event) {
         if (items.isEmpty()) return false;
 
-        if (event instanceof KeyEvent keyEvent) {
-            Integer currentSelected = state.selected();
-            int current = (currentSelected == null || currentSelected < 0) ? 0 : currentSelected;
+        Integer currentSelected = state.selected();
+        int current =
+            currentSelected == null || currentSelected < 0
+                ? 0
+                : currentSelected;
 
-            if (keyEvent.code() == KeyCode.DOWN) {
-                int next = Math.min(current + 1, items.size() - 1);
-                state.select(next);
-                return true;
-            } else if (keyEvent.code() == KeyCode.UP) {
-                int prev = Math.max(current - 1, 0);
-                state.select(prev);
-                return true;
-            }
+        if (event.code() == KeyCode.DOWN) {
+            int next = Math.min(current + 1, items.size() - 1);
+            state.select(next);
+            return true;
+        } else if (event.code() == KeyCode.UP) {
+            int prev = Math.max(current - 1, 0);
+            state.select(prev);
+            return true;
+        }
+        return false;
+    }
+
+    public boolean handleEvent(Event event) {
+        if (event instanceof KeyEvent keyEvent) {
+            return handleKey(keyEvent);
         }
         return false;
     }
 
     public void render(Frame frame, Rect area, boolean isFocused) {
-        String[] headers = columns.stream()
+        String[] headers = columns
+            .stream()
             .map(c -> c.header)
             .toArray(String[]::new);
 
         List<Row> rows = new ArrayList<>();
         for (T item : items) {
-            String[] cells = columns.stream()
+            String[] cells = columns
+                .stream()
                 .map(c -> c.valueExtractor.apply(item))
                 .toArray(String[]::new);
             rows.add(Row.from(cells));
         }
 
-        Constraint[] widths = columns.stream()
+        Constraint[] widths = columns
+            .stream()
             .map(c -> c.width)
             .toArray(Constraint[]::new);
 

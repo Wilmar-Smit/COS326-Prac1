@@ -17,7 +17,7 @@ import dev.tamboui.widgets.block.Block;
 import dev.tamboui.widgets.block.BorderType;
 import dev.tamboui.widgets.block.Borders;
 
-public class ErrorModal {
+public class ErrorModal  {
 
     private String errorMessage = null;
     private final Button closeButton;

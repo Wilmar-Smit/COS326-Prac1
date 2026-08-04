@@ -11,7 +11,7 @@ import dev.tamboui.widgets.block.Block;
 import dev.tamboui.widgets.block.Borders;
 import dev.tamboui.widgets.paragraph.Paragraph;
 
-public class Button {
+public class Button implements UI {
 
     private String label;
     private final Runnable action;

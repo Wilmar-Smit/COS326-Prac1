@@ -8,7 +8,6 @@ import dev.tamboui.style.Color;
 import dev.tamboui.style.Style;
 import dev.tamboui.terminal.Frame;
 import dev.tamboui.tui.event.Event;
-import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.MouseButton;
 import dev.tamboui.tui.event.MouseEvent;
@@ -17,6 +16,7 @@ import dev.tamboui.widgets.block.BorderType;
 import dev.tamboui.widgets.block.Borders;
 import entities.Researcher;
 import factories.ResearcherManager;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -24,6 +24,7 @@ public class CreateResearcher {
 
     private final ErrorModal errorModal = new ErrorModal();
     private Researcher res;
+
     private final InputBox nameInput = new InputBox(
         " Name ",
         "Enter researcher name..."
@@ -40,21 +41,20 @@ public class CreateResearcher {
 
     private final Button createResearcher = new Button(
         " Create new researcher ",
-        () -> CreateResearcherFunction()
+        this::CreateResearcherFunction
     );
-
     private final Button createNewResearcherBtn = new Button(
         " Clear and create new researcher ",
-        () -> CreateNewResearcher()
+        this::CreateNewResearcher
     );
-
     private final Button deleteResearcherBtn = new Button(
         " Delete researcher ",
-        () -> deleteResearcher()
+        this::deleteResearcher
     );
 
     private final TableView<Researcher> researcherTable;
 
+    private final List<UI> widgets = new ArrayList<>();
     private int focusedIndex = 0;
     private Rect tableArea = new Rect(0, 0, 0, 0);
 
@@ -77,6 +77,15 @@ public class CreateResearcher {
                 Researcher::getDepartment
             );
 
+        // Add all widgets to the list
+        widgets.add(nameInput);
+        widgets.add(emailInput);
+        widgets.add(departmentInput);
+        widgets.add(filterID);
+        widgets.add(createResearcher);
+        widgets.add(createNewResearcherBtn);
+        widgets.add(deleteResearcherBtn);
+
         refreshTableData();
     }
 
@@ -89,18 +98,14 @@ public class CreateResearcher {
             try {
                 Long searchId = Long.parseLong(filterText);
                 Researcher match = man.SearchResearcher(searchId);
-                if (match != null) {
-                    researcherTable.setItems(List.of(match));
-                } else {
-                    researcherTable.setItems(Collections.emptyList());
-                }
+                researcherTable.setItems(
+                    match != null ? List.of(match) : Collections.emptyList()
+                );
             } catch (NumberFormatException e) {
-                // If text is not a valid number, display empty results
                 researcherTable.setItems(Collections.emptyList());
             }
         } else {
-            List<Researcher> researchers = man.findAll();
-            researcherTable.setItems(researchers);
+            researcherTable.setItems(man.findAll());
         }
     }
 
@@ -133,24 +138,27 @@ public class CreateResearcher {
     public void CreateResearcherFunction() {
         boolean dontadd = false;
         ResearcherManager man = new ResearcherManager();
-        if (nameInput.getValue().length() > 2) res.setFullName(
-            nameInput.getValue()
-        );
-        else {
+
+        if (nameInput.getValue().length() > 2) {
+            res.setFullName(nameInput.getValue());
+        } else {
             errorModal.showError("name too short ");
             dontadd = true;
         }
+
         if (
             emailInput
                 .getValue()
                 .matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
-        ) res.setEmail(emailInput.getValue());
-        else {
+        ) {
+            res.setEmail(emailInput.getValue());
+        } else {
             errorModal.showError("email not valid");
             dontadd = true;
         }
 
         res.setDepartment(departmentInput.getValue());
+
         if (!dontadd) {
             if (res.getResearchId() == null) {
                 man.save(res);
@@ -174,118 +182,49 @@ public class CreateResearcher {
     }
 
     public boolean handleEvent(Event event) {
-        // Intercept events first if the error modal is active
-        if (errorModal.isVisible()) {
-            return errorModal.handleEvent(event);
-        }
+        if (errorModal.isVisible()) return errorModal.handleEvent(event);
 
         if (event instanceof KeyEvent keyEvent) {
-            if (focusedIndex == 7) {
-                if (keyEvent.code() == KeyCode.TAB) {
-                    focusedIndex = 0; // Loop back to Name Input
-                    return true;
-                }
-                boolean handled = researcherTable.handleEvent(event);
-                if (handled) {
-                    populateFieldsFromSelectedRow();
-                    return true;
-                }
-            }
-
-            if (keyEvent.code() == KeyCode.DOWN) {
-                focusedIndex = (focusedIndex + 1) % 8;
-                if (focusedIndex == 7) {
-                    populateFieldsFromSelectedRow();
-                }
-                return true;
-            } else if (keyEvent.code() == KeyCode.UP) {
-                focusedIndex = (focusedIndex + 7) % 8;
-                if (focusedIndex == 7) {
-                    populateFieldsFromSelectedRow();
-                }
-                return true;
-            }
-
-            if (focusedIndex == 0) {
-                return nameInput.handleKey(keyEvent);
-            } else if (focusedIndex == 1) {
-                return emailInput.handleKey(keyEvent);
-            } else if (focusedIndex == 2) {
-                return departmentInput.handleKey(keyEvent);
-            } else if (focusedIndex == 3) {
-                boolean handled = filterID.handleKey(keyEvent);
-                if (handled) {
+            if (focusedIndex < widgets.size()) {
+                boolean handled = widgets.get(focusedIndex).handleKey(keyEvent);
+                if (focusedIndex == 3 && handled) {
+                    // filterID refresh
                     refreshTableData();
                 }
                 return handled;
-            } else if (focusedIndex == 4) {
-                return createResearcher.handleKey(keyEvent);
-            } else if (focusedIndex == 5) {
-                return createNewResearcherBtn.handleKey(keyEvent);
-            } else if (focusedIndex == 6) {
-                return deleteResearcherBtn.handleKey(keyEvent);
             }
-        } else if (event instanceof MouseEvent mouseEvent) {
-            if (
-                mouseEvent.button() == MouseButton.LEFT && mouseEvent.isClick()
-            ) {
-                if (nameInput.isClicked(mouseEvent.x(), mouseEvent.y())) {
-                    focusedIndex = 0;
-                    return true;
-                } else if (
-                    emailInput.isClicked(mouseEvent.x(), mouseEvent.y())
-                ) {
-                    focusedIndex = 1;
-                    return true;
-                } else if (
-                    departmentInput.isClicked(mouseEvent.x(), mouseEvent.y())
-                ) {
-                    focusedIndex = 2;
-                    return true;
-                } else if (filterID.isClicked(mouseEvent.x(), mouseEvent.y())) {
-                    focusedIndex = 3;
-                    return true;
-                } else if (
-                    createResearcher.isClicked(mouseEvent.x(), mouseEvent.y())
-                ) {
-                    focusedIndex = 4;
-                    createResearcher.click();
-                    return true;
-                } else if (
-                    createNewResearcherBtn.isClicked(
-                        mouseEvent.x(),
-                        mouseEvent.y()
-                    )
-                ) {
-                    focusedIndex = 5;
-                    createNewResearcherBtn.click();
-                    return true;
-                } else if (
-                    deleteResearcherBtn.isClicked(
-                        mouseEvent.x(),
-                        mouseEvent.y()
-                    )
-                ) {
-                    focusedIndex = 6;
-                    deleteResearcherBtn.click();
-                    return true;
-                } else if (
-                    researcherTable.isClicked(
-                        mouseEvent.x(),
-                        mouseEvent.y(),
-                        tableArea
-                    )
-                ) {
-                    focusedIndex = 7;
-                    int rowIndex = researcherTable.getRowIndexAt(
-                        mouseEvent.y(),
-                        tableArea
-                    );
-                    if (rowIndex != -1) {
-                        populateFieldsFromSelectedRow();
+        } else if (
+            event instanceof MouseEvent mouseEvent &&
+            mouseEvent.button() == MouseButton.LEFT &&
+            mouseEvent.isClick()
+        ) {
+            for (int i = 0; i < widgets.size(); i++) {
+                UI w = widgets.get(i);
+                if (w.isClicked(mouseEvent.x(), mouseEvent.y())) {
+                    focusedIndex = i;
+                    if (w instanceof Button) {
+                        ((Button) w).click();
                     }
                     return true;
                 }
+            }
+
+            if (
+                researcherTable.isClicked(
+                    mouseEvent.x(),
+                    mouseEvent.y(),
+                    tableArea
+                )
+            ) {
+                focusedIndex = widgets.size(); // table index
+                int rowIndex = researcherTable.getRowIndexAt(
+                    mouseEvent.y(),
+                    tableArea
+                );
+                if (rowIndex != -1) {
+                    populateFieldsFromSelectedRow();
+                }
+                return true;
             }
         }
         return false;
@@ -324,7 +263,12 @@ public class CreateResearcher {
         deleteResearcherBtn.render(frame, rows.get(6), focusedIndex == 6);
 
         tableArea = rows.get(7);
-        researcherTable.render(frame, tableArea, focusedIndex == 7);
+        researcherTable.render(
+            frame,
+            tableArea,
+            focusedIndex == widgets.size()
+        );
+
         if (errorModal.isVisible()) errorModal.render(frame, area);
     }
 }
