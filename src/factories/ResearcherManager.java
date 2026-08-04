@@ -1,7 +1,6 @@
 package factories;
 
 import entities.Researcher;
-import java.util.List;
 import javax.persistence.EntityManager;
 
 /**

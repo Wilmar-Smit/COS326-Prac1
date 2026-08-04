@@ -20,7 +20,7 @@ public class Equipment implements Serializable {
     private String name;
     private String category;
     private String purchaseDate;
-    private String replaceCost;
+    private double replaceCost;
     private String status;
 
     public Equipment() {}
@@ -29,7 +29,7 @@ public class Equipment implements Serializable {
         String name,
         String category,
         String purchaseDate,
-        String replaceCost,
+        double replaceCost,
         String status
     ) {
         this.name = name;
@@ -71,11 +71,11 @@ public class Equipment implements Serializable {
         this.purchaseDate = purchaseDate;
     }
 
-    public String getReplaceCost() {
+    public double getReplaceCost() {
         return replaceCost;
     }
 
-    public void setReplaceCost(String replaceCost) {
+    public void setReplaceCost(double replaceCost) {
         this.replaceCost = replaceCost;
     }
 
