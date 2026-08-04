@@ -9,7 +9,7 @@ import javax.persistence.EntityManager;
  */
 public class EquipmentManager extends BaseManager<Equipment> {
 
-    EquipmentManager() {
+    public EquipmentManager() {
         super(Equipment.class);
     }
 

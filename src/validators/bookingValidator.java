@@ -2,6 +2,8 @@ package validators;
 
 import entities.Equipment;
 import entities.Researcher;
+import factories.BookingManager;
+import factories.ResearcherManager;
 
 public class bookingValidator {
 
@@ -15,7 +17,9 @@ public class bookingValidator {
 
     boolean researcherNumBookings(Researcher researcher) {
         // does backend lookup
-        return false;
+        BookingManager man = new BookingManager();
+        if (man.checkNumBookings(researcher) >= 3) return false;
+        else return true;
     }
 
     // searches for all bookings with this eq and checks theres no conflicting time slot

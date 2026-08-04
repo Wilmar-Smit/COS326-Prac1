@@ -11,7 +11,8 @@ import javax.persistence.ManyToOne;
 @Entity
 public class Booking implements Serializable {
 
-
+    public static final String ACTIVE = "Active";
+    public static final String FINISHED = "Finished";
 
     @Id
     @GeneratedValue
