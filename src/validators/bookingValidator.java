@@ -3,7 +3,6 @@ package validators;
 import entities.Equipment;
 import entities.Researcher;
 import factories.BookingManager;
-import factories.ResearcherManager;
 
 public class bookingValidator {
 
@@ -30,6 +29,7 @@ public class bookingValidator {
         String start,
         String end
     ) {
-        return false;
+        BookingManager man = new BookingManager();
+        return man.checkTimesConflict(eq, date, start, end);
     }
 }

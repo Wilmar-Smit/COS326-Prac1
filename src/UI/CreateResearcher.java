@@ -179,7 +179,6 @@ public class CreateResearcher {
         }
 
         if (event instanceof KeyEvent keyEvent) {
-            // Table focus: let TableView process UP/DOWN navigation first
             if (focusedIndex == 7) {
                 if (keyEvent.code() == KeyCode.TAB) {
                     focusedIndex = 0; // Loop back to Name Input
