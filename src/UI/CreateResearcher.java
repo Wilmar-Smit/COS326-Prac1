@@ -55,7 +55,6 @@ public class CreateResearcher {
 
     private final TableView<Researcher> researcherTable;
 
-    // 0..2: Inputs (Name, Email, Dept), 3: Filter Input, 4..6: Buttons (Create, Clear, Delete), 7: Table
     private int focusedIndex = 0;
     private Rect tableArea = new Rect(0, 0, 0, 0);
 
@@ -141,9 +140,11 @@ public class CreateResearcher {
             errorModal.showError("name too short ");
             dontadd = true;
         }
-        if (emailInput.getValue().contains("@")) res.setEmail(
-            emailInput.getValue()
-        );
+        if (
+            emailInput
+                .getValue()
+                .matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
+        ) res.setEmail(emailInput.getValue());
         else {
             errorModal.showError("email not valid");
             dontadd = true;

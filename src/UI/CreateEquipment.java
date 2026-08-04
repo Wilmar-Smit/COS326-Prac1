@@ -225,10 +225,9 @@ public class CreateEquipment {
         }
 
         if (event instanceof KeyEvent keyEvent) {
-            // Table focus: let TableView process UP/DOWN navigation first
             if (focusedIndex == 9) {
                 if (keyEvent.code() == KeyCode.TAB) {
-                    focusedIndex = 0; // Loop back to Name Input
+                    focusedIndex = 0;
                     return true;
                 }
                 boolean handled = equipmentTable.handleEvent(event);
