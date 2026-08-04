@@ -17,6 +17,7 @@ import dev.tamboui.widgets.block.BorderType;
 import dev.tamboui.widgets.block.Borders;
 import entities.Researcher;
 import factories.ResearcherManager;
+import java.util.Collections;
 import java.util.List;
 
 public class CreateResearcher {
@@ -34,6 +35,7 @@ public class CreateResearcher {
         " Department ",
         "Enter researcher department..."
     );
+    private final InputBox filterID = new InputBox(" Search by ID ", "ID...");
 
     private final Button createResearcher = new Button(
         " Create new researcher ",
@@ -52,7 +54,7 @@ public class CreateResearcher {
 
     private final TableView<Researcher> researcherTable;
 
-    // 0..2: Inputs, 3..5: Buttons (Create, Clear, Delete), 6: Table
+    // 0..2: Inputs (Name, Email, Dept), 3: Filter Input, 4..6: Buttons (Create, Clear, Delete), 7: Table
     private int focusedIndex = 0;
     private Rect tableArea = new Rect(0, 0, 0, 0);
 
@@ -80,8 +82,26 @@ public class CreateResearcher {
 
     public void refreshTableData() {
         ResearcherManager man = new ResearcherManager();
-        List<Researcher> researchers = man.findAll();
-        researcherTable.setItems(researchers);
+        String filterText =
+            filterID.getValue() != null ? filterID.getValue().trim() : "";
+
+        if (!filterText.isEmpty()) {
+            try {
+                Long searchId = Long.parseLong(filterText);
+                Researcher match = man.SearchResearcher(searchId);
+                if (match != null) {
+                    researcherTable.setItems(List.of(match));
+                } else {
+                    researcherTable.setItems(Collections.emptyList());
+                }
+            } catch (NumberFormatException e) {
+                // If text is not a valid number, display empty results
+                researcherTable.setItems(Collections.emptyList());
+            }
+        } else {
+            List<Researcher> researchers = man.findAll();
+            researcherTable.setItems(researchers);
+        }
     }
 
     public void deleteResearcher() {
@@ -128,14 +148,16 @@ public class CreateResearcher {
         nameInput.clear();
         emailInput.clear();
         departmentInput.clear();
+        filterID.clear();
         createResearcher.setLabel(" Create new researcher ");
         res = new Researcher();
+        refreshTableData();
     }
 
     public boolean handleEvent(Event event) {
         if (event instanceof KeyEvent keyEvent) {
             // Table focus: let TableView process UP/DOWN navigation first
-            if (focusedIndex == 6) {
+            if (focusedIndex == 7) {
                 if (keyEvent.code() == KeyCode.TAB) {
                     focusedIndex = 0; // Loop back to Name Input
                     return true;
@@ -148,14 +170,14 @@ public class CreateResearcher {
             }
 
             if (keyEvent.code() == KeyCode.DOWN) {
-                focusedIndex = (focusedIndex + 1) % 7;
-                if (focusedIndex == 6) {
+                focusedIndex = (focusedIndex + 1) % 8;
+                if (focusedIndex == 7) {
                     populateFieldsFromSelectedRow();
                 }
                 return true;
             } else if (keyEvent.code() == KeyCode.UP) {
-                focusedIndex = (focusedIndex + 6) % 7;
-                if (focusedIndex == 6) {
+                focusedIndex = (focusedIndex + 7) % 8;
+                if (focusedIndex == 7) {
                     populateFieldsFromSelectedRow();
                 }
                 return true;
@@ -168,10 +190,16 @@ public class CreateResearcher {
             } else if (focusedIndex == 2) {
                 return departmentInput.handleKey(keyEvent);
             } else if (focusedIndex == 3) {
-                return createResearcher.handleKey(keyEvent);
+                boolean handled = filterID.handleKey(keyEvent);
+                if (handled) {
+                    refreshTableData();
+                }
+                return handled;
             } else if (focusedIndex == 4) {
-                return createNewResearcherBtn.handleKey(keyEvent);
+                return createResearcher.handleKey(keyEvent);
             } else if (focusedIndex == 5) {
+                return createNewResearcherBtn.handleKey(keyEvent);
+            } else if (focusedIndex == 6) {
                 return deleteResearcherBtn.handleKey(keyEvent);
             }
         } else if (event instanceof MouseEvent mouseEvent) {
@@ -191,10 +219,13 @@ public class CreateResearcher {
                 ) {
                     focusedIndex = 2;
                     return true;
+                } else if (filterID.isClicked(mouseEvent.x(), mouseEvent.y())) {
+                    focusedIndex = 3;
+                    return true;
                 } else if (
                     createResearcher.isClicked(mouseEvent.x(), mouseEvent.y())
                 ) {
-                    focusedIndex = 3;
+                    focusedIndex = 4;
                     createResearcher.click();
                     return true;
                 } else if (
@@ -203,7 +234,7 @@ public class CreateResearcher {
                         mouseEvent.y()
                     )
                 ) {
-                    focusedIndex = 4;
+                    focusedIndex = 5;
                     createNewResearcherBtn.click();
                     return true;
                 } else if (
@@ -212,7 +243,7 @@ public class CreateResearcher {
                         mouseEvent.y()
                     )
                 ) {
-                    focusedIndex = 5;
+                    focusedIndex = 6;
                     deleteResearcherBtn.click();
                     return true;
                 } else if (
@@ -222,7 +253,7 @@ public class CreateResearcher {
                         tableArea
                     )
                 ) {
-                    focusedIndex = 6;
+                    focusedIndex = 7;
                     int rowIndex = researcherTable.getRowIndexAt(
                         mouseEvent.y(),
                         tableArea
@@ -253,6 +284,7 @@ public class CreateResearcher {
                 Constraint.length(3), // Name Input
                 Constraint.length(3), // Email Input
                 Constraint.length(3), // Department Input
+                Constraint.length(3), // Filter ID Input
                 Constraint.length(3), // Create / Update Button
                 Constraint.length(3), // Clear Button
                 Constraint.length(3), // Delete Button
@@ -263,11 +295,12 @@ public class CreateResearcher {
         nameInput.render(frame, rows.get(0), focusedIndex == 0);
         emailInput.render(frame, rows.get(1), focusedIndex == 1);
         departmentInput.render(frame, rows.get(2), focusedIndex == 2);
-        createResearcher.render(frame, rows.get(3), focusedIndex == 3);
-        createNewResearcherBtn.render(frame, rows.get(4), focusedIndex == 4);
-        deleteResearcherBtn.render(frame, rows.get(5), focusedIndex == 5);
+        filterID.render(frame, rows.get(3), focusedIndex == 3);
+        createResearcher.render(frame, rows.get(4), focusedIndex == 4);
+        createNewResearcherBtn.render(frame, rows.get(5), focusedIndex == 5);
+        deleteResearcherBtn.render(frame, rows.get(6), focusedIndex == 6);
 
-        tableArea = rows.get(6);
-        researcherTable.render(frame, tableArea, focusedIndex == 6);
+        tableArea = rows.get(7);
+        researcherTable.render(frame, tableArea, focusedIndex == 7);
     }
 }

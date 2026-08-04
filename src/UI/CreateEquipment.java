@@ -63,6 +63,7 @@ public class CreateEquipment {
         equipment = new Equipment();
     }
 
+
     private void createEquipmentFunction() {
         EquipmentManager manager = new EquipmentManager();
         equipment.setName(nameInput.getValue());
