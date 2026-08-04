@@ -8,6 +8,7 @@ import dev.tamboui.style.Color;
 import dev.tamboui.style.Style;
 import dev.tamboui.terminal.Frame;
 import dev.tamboui.tui.event.Event;
+import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.MouseButton;
 import dev.tamboui.tui.event.MouseEvent;
@@ -58,7 +59,6 @@ public class CreateEquipment {
         .indicatorColor(Color.DARK_GRAY)
         .build();
 
-    // Buttons
     private final Button createEQ = new Button(
         " Create Equipment ",
         this::createEquipmentFunction
@@ -161,9 +161,9 @@ public class CreateEquipment {
             );
 
             if (Equipment.OUT_OF_SERVICE.equals(selected.getStatus())) {
-                statusState.selectNext();
+                statusState.selectLast();
             } else {
-                statusState.selectPrevious();
+                statusState.selectFirst();
             }
 
             createEQ.setLabel(" Update equipment ");
@@ -225,20 +225,33 @@ public class CreateEquipment {
         if (errorModal.isVisible()) return errorModal.handleEvent(event);
 
         if (event instanceof KeyEvent keyEvent) {
+            // Global navigation keys
+            if (keyEvent.code() == KeyCode.DOWN) {
+                focusedIndex = (focusedIndex + 1) % (widgets.size() + 1); // +1 = table
+                return true;
+            } else if (keyEvent.code() == KeyCode.UP) {
+                focusedIndex =
+                    (focusedIndex + widgets.size()) % (widgets.size() + 1);
+                return true;
+            }
+
+            // Delegate to focused widget
             if (focusedIndex < widgets.size()) {
                 boolean handled = widgets.get(focusedIndex).handleKey(keyEvent);
+
                 if (focusedIndex == 4) {
                     // status select
-                    if (
-                        keyEvent.code().name().equals("LEFT")
-                    ) statusState.selectPrevious();
-                    else if (
-                        keyEvent.code().name().equals("RIGHT")
-                    ) statusState.selectNext();
-                    return true;
+                    if (keyEvent.code() == KeyCode.LEFT) {
+                        statusState.selectPrevious();
+                        return true;
+                    } else if (keyEvent.code() == KeyCode.RIGHT) {
+                        statusState.selectNext();
+                        return true;
+                    }
                 }
+
                 if (focusedIndex == 5 && handled) {
-                    // filterID
+                    // filterID refresh
                     refreshTableData();
                 }
                 return handled;

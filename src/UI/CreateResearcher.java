@@ -8,6 +8,7 @@ import dev.tamboui.style.Color;
 import dev.tamboui.style.Style;
 import dev.tamboui.terminal.Frame;
 import dev.tamboui.tui.event.Event;
+import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.MouseButton;
 import dev.tamboui.tui.event.MouseEvent;
@@ -184,11 +185,26 @@ public class CreateResearcher {
         if (errorModal.isVisible()) return errorModal.handleEvent(event);
 
         if (event instanceof KeyEvent keyEvent) {
+            if (keyEvent.code() == KeyCode.DOWN) {
+                focusedIndex = (focusedIndex + 1) % (widgets.size() + 1); // +1 for table
+                return true;
+            } else if (keyEvent.code() == KeyCode.UP) {
+                focusedIndex =
+                    (focusedIndex + widgets.size()) % (widgets.size() + 1);
+                return true;
+            }
+
+            // Delegate to focused widget
             if (focusedIndex < widgets.size()) {
                 boolean handled = widgets.get(focusedIndex).handleKey(keyEvent);
                 if (focusedIndex == 3 && handled) {
+                    // filterID refresh
                     refreshTableData();
                 }
+                return handled;
+            } else if (focusedIndex == widgets.size()) {
+                boolean handled = researcherTable.handleKey(keyEvent);
+                if (handled) populateFieldsFromSelectedRow();
                 return handled;
             }
         } else if (
@@ -200,9 +216,7 @@ public class CreateResearcher {
                 UI w = widgets.get(i);
                 if (w.isClicked(mouseEvent.x(), mouseEvent.y())) {
                     focusedIndex = i;
-                    if (w instanceof Button) {
-                        ((Button) w).click();
-                    }
+                    if (w instanceof Button) ((Button) w).click();
                     return true;
                 }
             }
@@ -214,14 +228,12 @@ public class CreateResearcher {
                     tableArea
                 )
             ) {
-                focusedIndex = widgets.size(); // table index
+                focusedIndex = widgets.size();
                 int rowIndex = researcherTable.getRowIndexAt(
                     mouseEvent.y(),
                     tableArea
                 );
-                if (rowIndex != -1) {
-                    populateFieldsFromSelectedRow();
-                }
+                if (rowIndex != -1) populateFieldsFromSelectedRow();
                 return true;
             }
         }
