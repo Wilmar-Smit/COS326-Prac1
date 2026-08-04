@@ -22,6 +22,10 @@ public class InputBox {
         state.clear();
     }
 
+    public void setValue(String val) {
+        state.setText(val);
+    }
+
     public InputBox(String label, String placeholder) {
         this.label = label;
         this.placeholder = placeholder;

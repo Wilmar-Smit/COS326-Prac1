@@ -17,6 +17,7 @@ import dev.tamboui.widgets.block.BorderType;
 import dev.tamboui.widgets.block.Borders;
 import entities.Researcher;
 import factories.ResearcherManager;
+import java.util.List;
 
 public class CreateResearcher {
 
@@ -44,22 +45,83 @@ public class CreateResearcher {
         () -> CreateNewResearcher()
     );
 
+    private final Button deleteResearcherBtn = new Button(
+        " Delete researcher ",
+        () -> deleteResearcher()
+    );
+
+    private final TableView<Researcher> researcherTable;
+
+    // 0..2: Inputs, 3..5: Buttons (Create, Clear, Delete), 6: Table
     private int focusedIndex = 0;
+    private Rect tableArea = new Rect(0, 0, 0, 0);
 
     public CreateResearcher() {
         res = new Researcher();
+
+        researcherTable = new TableView<Researcher>("Existing Researchers")
+            .addColumn("ID", Constraint.length(8), r ->
+                String.valueOf(r.getResearchId())
+            )
+            .addColumn(
+                "Name",
+                Constraint.percentage(30),
+                Researcher::getFullName
+            )
+            .addColumn("Email", Constraint.percentage(35), Researcher::getEmail)
+            .addColumn(
+                "Department",
+                Constraint.fill(),
+                Researcher::getDepartment
+            );
+
+        refreshTableData();
     }
 
-    // create / update
+    public void refreshTableData() {
+        ResearcherManager man = new ResearcherManager();
+        List<Researcher> researchers = man.findAll();
+        researcherTable.setItems(researchers);
+    }
+
+    public void deleteResearcher() {
+        if (res != null && res.getResearchId() != null) {
+            ResearcherManager man = new ResearcherManager();
+            man.delete(res);
+            CreateNewResearcher();
+            refreshTableData();
+        }
+    }
+
+    private void populateFieldsFromSelectedRow() {
+        Researcher selected = researcherTable.getSelectedItem();
+        if (selected != null) {
+            this.res = selected;
+            nameInput.setValue(
+                selected.getFullName() != null ? selected.getFullName() : ""
+            );
+            emailInput.setValue(
+                selected.getEmail() != null ? selected.getEmail() : ""
+            );
+            departmentInput.setValue(
+                selected.getDepartment() != null ? selected.getDepartment() : ""
+            );
+            createResearcher.setLabel(" Update researcher ");
+        }
+    }
+
     public void CreateResearcherFunction() {
         ResearcherManager man = new ResearcherManager();
         res.setFullName(nameInput.getValue());
         res.setEmail(emailInput.getValue());
         res.setDepartment(departmentInput.getValue());
         if (res.getResearchId() == null) {
-            createResearcher.setLabel("Update researcher");
             man.save(res);
-        } else man.update(res);
+        } else {
+            man.update(res);
+        }
+        createResearcher.setLabel(" Update researcher ");
+        refreshTableData();
     }
 
     public void CreateNewResearcher() {
@@ -72,11 +134,30 @@ public class CreateResearcher {
 
     public boolean handleEvent(Event event) {
         if (event instanceof KeyEvent keyEvent) {
+            // Table focus: let TableView process UP/DOWN navigation first
+            if (focusedIndex == 6) {
+                if (keyEvent.code() == KeyCode.TAB) {
+                    focusedIndex = 0; // Loop back to Name Input
+                    return true;
+                }
+                boolean handled = researcherTable.handleEvent(event);
+                if (handled) {
+                    populateFieldsFromSelectedRow();
+                    return true;
+                }
+            }
+
             if (keyEvent.code() == KeyCode.DOWN) {
-                focusedIndex = (focusedIndex + 1) % 4;
+                focusedIndex = (focusedIndex + 1) % 7;
+                if (focusedIndex == 6) {
+                    populateFieldsFromSelectedRow();
+                }
                 return true;
             } else if (keyEvent.code() == KeyCode.UP) {
-                focusedIndex = (focusedIndex + 3) % 4;
+                focusedIndex = (focusedIndex + 6) % 7;
+                if (focusedIndex == 6) {
+                    populateFieldsFromSelectedRow();
+                }
                 return true;
             }
 
@@ -88,9 +169,11 @@ public class CreateResearcher {
                 return departmentInput.handleKey(keyEvent);
             } else if (focusedIndex == 3) {
                 return createResearcher.handleKey(keyEvent);
-            } else if (
-                focusedIndex == 4
-            ) return createNewResearcherBtn.handleKey(keyEvent);
+            } else if (focusedIndex == 4) {
+                return createNewResearcherBtn.handleKey(keyEvent);
+            } else if (focusedIndex == 5) {
+                return deleteResearcherBtn.handleKey(keyEvent);
+            }
         } else if (event instanceof MouseEvent mouseEvent) {
             if (
                 mouseEvent.button() == MouseButton.LEFT && mouseEvent.isClick()
@@ -114,6 +197,40 @@ public class CreateResearcher {
                     focusedIndex = 3;
                     createResearcher.click();
                     return true;
+                } else if (
+                    createNewResearcherBtn.isClicked(
+                        mouseEvent.x(),
+                        mouseEvent.y()
+                    )
+                ) {
+                    focusedIndex = 4;
+                    createNewResearcherBtn.click();
+                    return true;
+                } else if (
+                    deleteResearcherBtn.isClicked(
+                        mouseEvent.x(),
+                        mouseEvent.y()
+                    )
+                ) {
+                    focusedIndex = 5;
+                    deleteResearcherBtn.click();
+                    return true;
+                } else if (
+                    researcherTable.isClicked(
+                        mouseEvent.x(),
+                        mouseEvent.y(),
+                        tableArea
+                    )
+                ) {
+                    focusedIndex = 6;
+                    int rowIndex = researcherTable.getRowIndexAt(
+                        mouseEvent.y(),
+                        tableArea
+                    );
+                    if (rowIndex != -1) {
+                        populateFieldsFromSelectedRow();
+                    }
+                    return true;
                 }
             }
         }
@@ -133,12 +250,13 @@ public class CreateResearcher {
 
         var rows = Layout.vertical()
             .constraints(new Constraint[] {
-                Constraint.length(3),
-                Constraint.length(3),
-                Constraint.length(3),
-                Constraint.length(3),
-                Constraint.length(3),
-                Constraint.fill(1),
+                Constraint.length(3), // Name Input
+                Constraint.length(3), // Email Input
+                Constraint.length(3), // Department Input
+                Constraint.length(3), // Create / Update Button
+                Constraint.length(3), // Clear Button
+                Constraint.length(3), // Delete Button
+                Constraint.fill(1), // Table View
             })
             .split(container.inner(area));
 
@@ -147,5 +265,9 @@ public class CreateResearcher {
         departmentInput.render(frame, rows.get(2), focusedIndex == 2);
         createResearcher.render(frame, rows.get(3), focusedIndex == 3);
         createNewResearcherBtn.render(frame, rows.get(4), focusedIndex == 4);
+        deleteResearcherBtn.render(frame, rows.get(5), focusedIndex == 5);
+
+        tableArea = rows.get(6);
+        researcherTable.render(frame, tableArea, focusedIndex == 6);
     }
 }
