@@ -1,26 +1,31 @@
-import dev.tamboui.text.Text;
+import UI.CreateResearcher;
+import dev.tamboui.tui.TuiConfig;
 import dev.tamboui.tui.TuiRunner;
+import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
-import dev.tamboui.widgets.paragraph.Paragraph;
 
 public class Main {
 
     public static void main(String[] args) throws Exception {
-        try (var tui = TuiRunner.create()) {
+        CreateResearcher resPage = new CreateResearcher();
+
+        var config = TuiConfig.builder().mouseCapture(true).build();
+
+        try (var tui = TuiRunner.create(config)) {
             tui.run(
-                (event, runner) ->
-                    switch (event) {
-                        case KeyEvent k when k.isQuit() -> {
-                            runner.quit();
-                            yield false;
-                        }
-                        default -> false;
-                    },
+                (event, runner) -> {
+                    if (
+                        event instanceof KeyEvent k &&
+                        k.code() == KeyCode.ESCAPE
+                    ) {
+                        runner.quit();
+                        return true;
+                    }
+
+                    return resPage.handleEvent(event);
+                },
                 frame -> {
-                    var paragraph = Paragraph.builder()
-                        .text(Text.from("Hello, TamboUI! Press 'q' to quit."))
-                        .build();
-                    frame.renderWidget(paragraph, frame.area());
+                    resPage.render(frame);
                 }
             );
         }
