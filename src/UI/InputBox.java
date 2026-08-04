@@ -11,7 +11,7 @@ import dev.tamboui.widgets.block.Borders;
 import dev.tamboui.widgets.input.TextInput;
 import dev.tamboui.widgets.input.TextInputState;
 
-public class InputBox implements UI{
+public class InputBox implements UI {
 
     private final TextInputState state;
     private final String label;
@@ -64,9 +64,13 @@ public class InputBox implements UI{
             ? Style.EMPTY.fg(Color.YELLOW)
             : Style.EMPTY.fg(Color.WHITE);
 
+        Style cursorHighlight = focused
+            ? Style.EMPTY.reversed() // or bg/fg combo
+            : Style.EMPTY;
+
         TextInput textInput = TextInput.builder()
             .placeholder(placeholder)
-            .cursorStyle(focused ? Style.EMPTY.reversed() : Style.EMPTY)
+            .cursorStyle(cursorHighlight)
             .block(
                 Block.builder()
                     .title(label)
@@ -76,7 +80,7 @@ public class InputBox implements UI{
             )
             .build();
 
-        textInput.render(area, frame.buffer(), state);
+        textInput.renderWithCursor(area, frame.buffer(), state, frame);
     }
 
     public boolean isClicked(int x, int y) {
