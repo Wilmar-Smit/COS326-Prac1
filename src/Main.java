@@ -8,8 +8,6 @@ import dev.tamboui.tui.TuiConfig;
 import dev.tamboui.tui.TuiRunner;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
-import dev.tamboui.tui.event.MouseButton;
-import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.widgets.block.Block;
 import dev.tamboui.widgets.block.Borders;
 import dev.tamboui.widgets.paragraph.Paragraph;
@@ -51,28 +49,7 @@ public class Main {
                             );
                             return true;
                         }
-                    } else if (event instanceof MouseEvent m) {
-                        if (m.button() == MouseButton.LEFT && m.isClick()) {
-                            // The navigation block occupies row 0 to 2 (height 3)
-                            if (m.y() >= 0 && m.y() < 3) {
-                                int x = m.x();
-                                int currentX = 1; // 1-char left border padding
-
-                                for (int i = 0; i < TAB_TITLES.length; i++) {
-                                    int titleWidth = TAB_TITLES[i].length();
-                                    int tabEnd = currentX + titleWidth;
-
-                                    if (x >= currentX && x < tabEnd) {
-                                        tabsState.select(i);
-                                        return true;
-                                    }
-
-                                    currentX = tabEnd + DIVIDER.length();
-                                }
-                            }
-                        }
                     }
-
                     if (tabsState.selected() == 0) {
                         return resPage.handleEvent(event);
                     }
@@ -95,7 +72,7 @@ public class Main {
                         .divider(DIVIDER)
                         .block(
                             Block.builder()
-                                .title(" Navigation (F1-F4 / Tab) ")
+                                .title(" Navigation (Tab) ")
                                 .borders(Borders.ALL)
                                 .build()
                         )
