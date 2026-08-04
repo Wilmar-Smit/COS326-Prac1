@@ -13,9 +13,13 @@ import dev.tamboui.widgets.paragraph.Paragraph;
 
 public class Button {
 
-    private final String label;
+    private String label;
     private final Runnable action;
     private Rect bounds;
+
+    public void setLabel(String label) {
+        this.label = label;
+    }
 
     public Button(String label, Runnable action) {
         this.label = label;

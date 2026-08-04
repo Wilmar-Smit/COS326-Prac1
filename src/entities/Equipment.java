@@ -9,9 +9,7 @@ import javax.persistence.Id;
 public class Equipment implements Serializable {
 
     public static final String OUT_OF_SERVICE = "Out of Service";
-    public static final String PENDING = "Pending";
-    public static final String APPROVED = "Approved";
-    public static final String REJECTED = "Rejected";
+    public static final String WORKING = "Working";
 
     @Id
     @GeneratedValue
@@ -84,11 +82,6 @@ public class Equipment implements Serializable {
     }
 
     public void setStatus(String status) {
-        if (
-            status == OUT_OF_SERVICE ||
-            status == APPROVED ||
-            status == REJECTED ||
-            status == PENDING
-        ) this.status = status;
+        if (status == OUT_OF_SERVICE || status == WORKING) this.status = status;
     }
 }

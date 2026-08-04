@@ -35,8 +35,13 @@ public class CreateResearcher {
     );
 
     private final Button createResearcher = new Button(
-        " Create Researcher ",
+        " Create new researcher ",
         () -> CreateResearcherFunction()
+    );
+
+    private final Button createNewResearcherBtn = new Button(
+        " Clear and create new researcher ",
+        () -> CreateNewResearcher()
     );
 
     private int focusedIndex = 0;
@@ -45,12 +50,23 @@ public class CreateResearcher {
         res = new Researcher();
     }
 
+    // create / update
     public void CreateResearcherFunction() {
         ResearcherManager man = new ResearcherManager();
         res.setFullName(nameInput.getValue());
         res.setEmail(emailInput.getValue());
         res.setDepartment(departmentInput.getValue());
-        man.save(res);
+        if (res.getResearchId() == null) {
+            createResearcher.setLabel("Update researcher");
+            man.save(res);
+        } else man.update(res);
+    }
+
+    public void CreateNewResearcher() {
+        nameInput.clear();
+        emailInput.clear();
+        departmentInput.clear();
+        createResearcher.setLabel(" Create new researcher ");
         res = new Researcher();
     }
 
@@ -72,7 +88,9 @@ public class CreateResearcher {
                 return departmentInput.handleKey(keyEvent);
             } else if (focusedIndex == 3) {
                 return createResearcher.handleKey(keyEvent);
-            }
+            } else if (
+                focusedIndex == 4
+            ) return createNewResearcherBtn.handleKey(keyEvent);
         } else if (event instanceof MouseEvent mouseEvent) {
             if (
                 mouseEvent.button() == MouseButton.LEFT && mouseEvent.isClick()
@@ -119,6 +137,7 @@ public class CreateResearcher {
                 Constraint.length(3),
                 Constraint.length(3),
                 Constraint.length(3),
+                Constraint.length(3),
                 Constraint.fill(1),
             })
             .split(container.inner(area));
@@ -127,5 +146,6 @@ public class CreateResearcher {
         emailInput.render(frame, rows.get(1), focusedIndex == 1);
         departmentInput.render(frame, rows.get(2), focusedIndex == 2);
         createResearcher.render(frame, rows.get(3), focusedIndex == 3);
+        createNewResearcherBtn.render(frame, rows.get(4), focusedIndex == 4);
     }
 }

@@ -18,6 +18,10 @@ public class InputBox {
     private final String placeholder;
     private Rect bounds;
 
+    public void clear() {
+        state.clear();
+    }
+
     public InputBox(String label, String placeholder) {
         this.label = label;
         this.placeholder = placeholder;
@@ -52,16 +56,20 @@ public class InputBox {
 
     public void render(Frame frame, Rect area, boolean focused) {
         this.bounds = area;
-        Style borderStyle = focused ? Style.EMPTY.fg(Color.YELLOW) : Style.EMPTY.fg(Color.WHITE);
+        Style borderStyle = focused
+            ? Style.EMPTY.fg(Color.YELLOW)
+            : Style.EMPTY.fg(Color.WHITE);
 
         TextInput textInput = TextInput.builder()
             .placeholder(placeholder)
             .cursorStyle(focused ? Style.EMPTY.reversed() : Style.EMPTY)
-            .block(Block.builder()
-                .title(label)
-                .borders(Borders.ALL)
-                .borderStyle(borderStyle)
-                .build())
+            .block(
+                Block.builder()
+                    .title(label)
+                    .borders(Borders.ALL)
+                    .borderStyle(borderStyle)
+                    .build()
+            )
             .build();
 
         textInput.render(area, frame.buffer(), state);
