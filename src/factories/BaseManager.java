@@ -47,12 +47,12 @@ public abstract class BaseManager<T> {
     }
 
     public List<T> findAll() {
-        EntityManager em = DbFactory.createManager();
+        EntityManager man = DbFactory.createManager();
         try {
             String jpql = "SELECT e FROM " + entityClass.getSimpleName() + " e";
-            return em.createQuery(jpql, entityClass).getResultList();
+            return man.createQuery(jpql, entityClass).getResultList();
         } finally {
-            em.close();
+            man.close();
         }
     }
 
