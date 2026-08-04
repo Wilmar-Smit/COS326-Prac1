@@ -64,9 +64,7 @@ public class InputBox implements UI {
             ? Style.EMPTY.fg(Color.YELLOW)
             : Style.EMPTY.fg(Color.WHITE);
 
-        Style cursorHighlight = focused
-            ? Style.EMPTY.reversed() // or bg/fg combo
-            : Style.EMPTY;
+        Style cursorHighlight = focused ? Style.EMPTY.reversed() : Style.EMPTY;
 
         TextInput textInput = TextInput.builder()
             .placeholder(placeholder)
