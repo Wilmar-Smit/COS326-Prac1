@@ -22,6 +22,7 @@ import java.util.List;
 
 public class CreateResearcher {
 
+    private final ErrorModal errorModal = new ErrorModal();
     private Researcher res;
     private final InputBox nameInput = new InputBox(
         " Name ",
@@ -131,16 +132,33 @@ public class CreateResearcher {
     }
 
     public void CreateResearcherFunction() {
+        boolean dontadd = false;
         ResearcherManager man = new ResearcherManager();
-        res.setFullName(nameInput.getValue());
-        res.setEmail(emailInput.getValue());
-        res.setDepartment(departmentInput.getValue());
-        if (res.getResearchId() == null) {
-            man.save(res);
-        } else {
-            man.update(res);
+        if (nameInput.getValue().length() > 2) res.setFullName(
+            nameInput.getValue()
+        );
+        else {
+            errorModal.showError("name too short ");
+            dontadd = true;
         }
-        createResearcher.setLabel(" Update researcher ");
+        if (emailInput.getValue().contains("@")) res.setEmail(
+            emailInput.getValue()
+        );
+        else {
+            errorModal.showError("email not valid");
+            dontadd = true;
+        }
+
+        res.setDepartment(departmentInput.getValue());
+        if (!dontadd) {
+            if (res.getResearchId() == null) {
+                man.save(res);
+                createResearcher.setLabel(" Update researcher ");
+            } else {
+                man.update(res);
+            }
+        }
+
         refreshTableData();
     }
 
@@ -155,6 +173,11 @@ public class CreateResearcher {
     }
 
     public boolean handleEvent(Event event) {
+        // Intercept events first if the error modal is active
+        if (errorModal.isVisible()) {
+            return errorModal.handleEvent(event);
+        }
+
         if (event instanceof KeyEvent keyEvent) {
             // Table focus: let TableView process UP/DOWN navigation first
             if (focusedIndex == 7) {
@@ -302,5 +325,6 @@ public class CreateResearcher {
 
         tableArea = rows.get(7);
         researcherTable.render(frame, tableArea, focusedIndex == 7);
+        if (errorModal.isVisible()) errorModal.render(frame, area);
     }
 }

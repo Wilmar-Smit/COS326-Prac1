@@ -23,7 +23,6 @@ public class Main {
         "Create Researcher",
         "Create Equipment",
         "Create Booking",
-        "View All",
     };
     private static final String DIVIDER = " | ";
 
@@ -97,17 +96,6 @@ public class Main {
                             .block(
                                 Block.builder()
                                     .title("Create Booking")
-                                    .borders(Borders.ALL)
-                                    .build()
-                            )
-                            .build();
-                        frame.renderWidget(page, contentArea);
-                    } else if (tabsState.selected() == 3) {
-                        var page = Paragraph.builder()
-                            .text(Text.from("View All Records"))
-                            .block(
-                                Block.builder()
-                                    .title("View All")
                                     .borders(Borders.ALL)
                                     .build()
                             )
