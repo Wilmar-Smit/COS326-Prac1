@@ -15,6 +15,8 @@ import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.widgets.block.Block;
 import dev.tamboui.widgets.block.BorderType;
 import dev.tamboui.widgets.block.Borders;
+import dev.tamboui.widgets.checkbox.Checkbox;
+import dev.tamboui.widgets.checkbox.CheckboxState;
 import dev.tamboui.widgets.select.Select;
 import dev.tamboui.widgets.select.SelectState;
 import entities.Equipment;
@@ -25,8 +27,44 @@ import java.util.List;
 
 public class CreateEquipment {
 
+    private Rect area;
+
+    private final Block container = Block.builder()
+        .title("Create Equipment")
+        .borders(Borders.ALL)
+        .borderType(BorderType.ROUNDED)
+        .borderStyle(Style.EMPTY.fg(Color.CYAN))
+        .padding(new Padding(1, 2, 1, 2))
+        .build();
+
+    private final Constraint[] rowConstraints = new Constraint[] {
+        Constraint.length(3), // Name
+        Constraint.length(3), // Category
+        Constraint.length(3), // Purchase Date
+        Constraint.length(3), // Replacement Cost
+        Constraint.length(3), // Status Select
+        Constraint.length(3), // Filter ID Input
+        Constraint.length(3), // Create / Update Button
+        Constraint.length(3), // Clear Button
+        Constraint.length(3), // Delete Button
+        Constraint.length(3), // Checkbox
+        Constraint.fill(1), // Table View
+    };
+
     private final ErrorModal errorModal = new ErrorModal();
     private Equipment equipment;
+
+    private final CheckboxState checkboxState = new CheckboxState();
+    private final Checkbox checkbox = Checkbox.builder().build();
+
+    // Function called when checkbox toggled
+    private void onCheckboxToggle() {
+        if (checkboxState.isChecked()) {
+            System.out.println("Checkbox is ON");
+        } else {
+            System.out.println("Checkbox is OFF");
+        }
+    }
 
     // Inputs
     private final InputBox nameInput = new InputBox(
@@ -47,18 +85,20 @@ public class CreateEquipment {
     );
     private final InputBox filterID = new InputBox(" Search by ID ", "ID...");
 
-    // Select Status
+    // Status select
     private final SelectState statusState = new SelectState(
         Equipment.WORKING,
         Equipment.OUT_OF_SERVICE
     );
-    private final Select statusSelect = Select.builder()
-        .leftIndicator("< ")
-        .rightIndicator(" >")
-        .selectedColor(Color.CYAN)
-        .indicatorColor(Color.DARK_GRAY)
+    private final Select statusSelect = Select.builder().build();
+
+    private final Block statusBlock = Block.builder()
+        .title(" Status (Left/Right Arrows) ")
+        .borders(Borders.ALL)
+        .borderType(BorderType.ROUNDED)
         .build();
 
+    // Buttons
     private final Button createEQ = new Button(
         " Create Equipment ",
         this::createEquipmentFunction
@@ -99,7 +139,6 @@ public class CreateEquipment {
             )
             .addColumn("Status", Constraint.fill(), Equipment::getStatus);
 
-        // Add widgets to list
         widgets.add(nameInput);
         widgets.add(categoryInput);
         widgets.add(purchaseDate);
@@ -221,13 +260,48 @@ public class CreateEquipment {
         refreshTableData();
     }
 
+    public void render(Frame frame, Rect areaInput) {
+        this.area = areaInput;
+        frame.renderWidget(container, area);
+
+        var rows = Layout.vertical()
+            .constraints(rowConstraints)
+            .split(container.inner(area));
+
+        nameInput.render(frame, rows.get(0), focusedIndex == 0);
+        categoryInput.render(frame, rows.get(1), focusedIndex == 1);
+        purchaseDate.render(frame, rows.get(2), focusedIndex == 2);
+        replaceCostInput.render(frame, rows.get(3), focusedIndex == 3);
+
+        // Status block render
+        frame.renderWidget(statusBlock, rows.get(4));
+        statusSelect.render(
+            statusBlock.inner(rows.get(4)),
+            frame.buffer(),
+            statusState
+        );
+
+        filterID.render(frame, rows.get(5), focusedIndex == 5);
+        createEQ.render(frame, rows.get(6), focusedIndex == 6);
+        createNewEquipmentBtn.render(frame, rows.get(7), focusedIndex == 7);
+        deleteEquipmentBtn.render(frame, rows.get(8), focusedIndex == 8);
+
+        var checkboxArea = rows.get(9);
+        checkbox.render(checkboxArea, frame.buffer(), checkboxState);
+
+        tableArea = rows.get(10);
+        equipmentTable.render(frame, tableArea, focusedIndex == widgets.size());
+
+        if (errorModal.isVisible()) errorModal.render(frame, area);
+    }
+
     public boolean handleEvent(Event event) {
         if (errorModal.isVisible()) return errorModal.handleEvent(event);
 
         if (event instanceof KeyEvent keyEvent) {
-            // Global navigation keys
+            // Navigation
             if (keyEvent.code() == KeyCode.DOWN) {
-                focusedIndex = (focusedIndex + 1) % (widgets.size() + 1); // +1 = table
+                focusedIndex = (focusedIndex + 1) % (widgets.size() + 1); // +1 for table
                 return true;
             } else if (keyEvent.code() == KeyCode.UP) {
                 focusedIndex =
@@ -239,8 +313,8 @@ public class CreateEquipment {
             if (focusedIndex < widgets.size()) {
                 boolean handled = widgets.get(focusedIndex).handleKey(keyEvent);
 
+                // Status select keyboard arrows
                 if (focusedIndex == 4) {
-                    // status select
                     if (keyEvent.code() == KeyCode.LEFT) {
                         statusState.selectPrevious();
                         return true;
@@ -250,8 +324,8 @@ public class CreateEquipment {
                     }
                 }
 
+                // Refresh table when filter changes
                 if (focusedIndex == 5 && handled) {
-                    // filterID refresh
                     refreshTableData();
                 }
                 return handled;
@@ -265,93 +339,39 @@ public class CreateEquipment {
             mouseEvent.button() == MouseButton.LEFT &&
             mouseEvent.isClick()
         ) {
+            int mx = mouseEvent.x();
+            int my = mouseEvent.y();
+
+            // Normal widgets
             for (int i = 0; i < widgets.size(); i++) {
                 UI w = widgets.get(i);
-                if (w.isClicked(mouseEvent.x(), mouseEvent.y())) {
+                if (w.isClicked(mx, my)) {
                     focusedIndex = i;
                     if (w instanceof Button) ((Button) w).click();
                     return true;
                 }
             }
 
-            if (
-                equipmentTable.isClicked(
-                    mouseEvent.x(),
-                    mouseEvent.y(),
-                    tableArea
-                )
-            ) {
+            var rows = Layout.vertical()
+                .constraints(rowConstraints)
+                .split(container.inner(area));
+            Rect checkboxArea = rows.get(9);
+
+            if (checkboxArea.contains(mx, my)) {
+                checkboxState.toggle();
+                onCheckboxToggle();
+                return true;
+            }
+
+            // Table hit-test
+            if (equipmentTable.isClicked(mx, my, tableArea)) {
                 focusedIndex = widgets.size();
-                int rowIndex = equipmentTable.getRowIndexAt(
-                    mouseEvent.y(),
-                    tableArea
-                );
+                int rowIndex = equipmentTable.getRowIndexAt(my, tableArea);
                 if (rowIndex != -1) populateFieldsFromSelectedRow();
                 return true;
             }
         }
+
         return false;
-    }
-
-    public void render(Frame frame, Rect area) {
-        var container = Block.builder()
-            .title("Create Equipment")
-            .borders(Borders.ALL)
-            .borderType(BorderType.ROUNDED)
-            .borderStyle(Style.EMPTY.fg(Color.CYAN))
-            .padding(new Padding(1, 2, 1, 2))
-            .build();
-
-        frame.renderWidget(container, area);
-
-        var rows = Layout.vertical()
-            .constraints(new Constraint[] {
-                Constraint.length(3), // Name
-                Constraint.length(3), // Category
-                Constraint.length(3), // Purchase Date
-                Constraint.length(3), // Replacement Cost
-                Constraint.length(3), // Status Select
-                Constraint.length(3), // Filter ID Input
-                Constraint.length(3), // Create / Update Button
-                Constraint.length(3), // Clear Button
-                Constraint.length(3), // Delete Button
-                Constraint.fill(1), // Table View
-            })
-            .split(container.inner(area));
-
-        nameInput.render(frame, rows.get(0), focusedIndex == 0);
-        categoryInput.render(frame, rows.get(1), focusedIndex == 1);
-        purchaseDate.render(frame, rows.get(2), focusedIndex == 2);
-        replaceCostInput.render(frame, rows.get(3), focusedIndex == 3);
-
-        // Status select block
-        var statusArea = rows.get(4);
-        var statusBlock = Block.builder()
-            .title(" Status (Left/Right Arrows) ")
-            .borders(Borders.ALL)
-            .borderType(BorderType.ROUNDED)
-            .borderStyle(
-                focusedIndex == 4
-                    ? Style.EMPTY.fg(Color.CYAN)
-                    : Style.EMPTY.fg(Color.DARK_GRAY)
-            )
-            .build();
-
-        frame.renderWidget(statusBlock, statusArea);
-        statusSelect.render(
-            statusBlock.inner(statusArea),
-            frame.buffer(),
-            statusState
-        );
-
-        filterID.render(frame, rows.get(5), focusedIndex == 5);
-        createEQ.render(frame, rows.get(6), focusedIndex == 6);
-        createNewEquipmentBtn.render(frame, rows.get(7), focusedIndex == 7);
-        deleteEquipmentBtn.render(frame, rows.get(8), focusedIndex == 8);
-
-        tableArea = rows.get(9);
-        equipmentTable.render(frame, tableArea, focusedIndex == widgets.size());
-
-        if (errorModal.isVisible()) errorModal.render(frame, area);
     }
 }
