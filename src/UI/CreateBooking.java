@@ -14,9 +14,6 @@ import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.widgets.block.Block;
 import dev.tamboui.widgets.block.BorderType;
 import dev.tamboui.widgets.block.Borders;
-import dev.tamboui.widgets.scrollbar.Scrollbar;
-import dev.tamboui.widgets.scrollbar.ScrollbarOrientation;
-import dev.tamboui.widgets.scrollbar.ScrollbarState;
 import dev.tamboui.widgets.select.Select;
 import dev.tamboui.widgets.select.SelectState;
 import entities.Booking;
@@ -29,6 +26,10 @@ import java.util.Collections;
 import java.util.List;
 
 public class CreateBooking {
+
+    private static final int RESEARCHER_TABLE_INDEX = 100;
+    private static final int EQUIPMENT_TABLE_INDEX = 101;
+    private static final int BOOKING_TABLE_INDEX = 102;
 
     private Rect area;
     private final Block container = Block.builder()
@@ -121,14 +122,14 @@ public class CreateBooking {
     private Rect researcherArea, equipmentArea, bookingArea;
 
     public CreateBooking() {
-        widgets.add(dateInput);
-        widgets.add(startTimeInput);
-        widgets.add(endTimeInput);
-        widgets.add(purposeInput);
-        widgets.add(filterResearcher);
-        widgets.add(filterEquipment);
-        widgets.add(createBookingBtn);
-        widgets.add(clearBookingBtn);
+        widgets.add(dateInput); // 0
+        widgets.add(startTimeInput); // 1
+        widgets.add(endTimeInput); // 2
+        widgets.add(purposeInput); // 3
+        widgets.add(createBookingBtn); // 4
+        widgets.add(clearBookingBtn); // 5
+        widgets.add(filterResearcher); // 6
+        widgets.add(filterEquipment); // 7
 
         refreshResearcherTable();
         refreshEquipmentTable();
@@ -168,9 +169,11 @@ public class CreateBooking {
             try {
                 Long searchId = Long.parseLong(filterText);
                 Equipment match = manager.searchEquipment(searchId);
-                equipmentTable.setItems(
-                    match != null ? List.of(match) : Collections.emptyList()
-                );
+                if (match.getStatus() != Equipment.OUT_OF_SERVICE) {
+                    equipmentTable.setItems(
+                        match != null ? List.of(match) : Collections.emptyList()
+                    );
+                }
             } catch (NumberFormatException e) {
                 equipmentTable.setItems(Collections.emptyList());
             }
@@ -222,15 +225,11 @@ public class CreateBooking {
 
         var rows = Layout.vertical()
             .constraints(new Constraint[] {
-                Constraint.length(3), // date
-                Constraint.length(3), // start time
-                Constraint.length(3), // end time
-                Constraint.length(3), // purpose
-                Constraint.length(3), // status
-                Constraint.length(3), // researcher name
-                Constraint.length(3), // equipment name
-                Constraint.length(3), // create booking button
-                Constraint.length(3), // clear booking button
+                Constraint.length(3), // date + start time
+                Constraint.length(3), // end time + purpose
+                Constraint.length(3), // status block
+                Constraint.length(3), // researcher + equipment name (display only)
+                Constraint.length(3), // buttons row
                 Constraint.length(3), // researcher filter
                 Constraint.length(5), // researcher table
                 Constraint.length(3), // equipment filter
@@ -239,45 +238,61 @@ public class CreateBooking {
             })
             .split(container.inner(area));
 
-        dateInput.render(frame, rows.get(0), focusedIndex == 0);
-        startTimeInput.render(frame, rows.get(1), focusedIndex == 1);
-        endTimeInput.render(frame, rows.get(2), focusedIndex == 2);
-        purposeInput.render(frame, rows.get(3), focusedIndex == 3);
+        // Row 0: date + start time
+        var dateStartRow = Layout.horizontal()
+            .constraints(Constraint.percentage(50), Constraint.percentage(50))
+            .split(rows.get(0));
+        dateInput.render(frame, dateStartRow.get(0), focusedIndex == 0);
+        startTimeInput.render(frame, dateStartRow.get(1), focusedIndex == 1);
 
-        frame.renderWidget(
-            Block.builder()
-                .title(" Status ")
-                .borders(Borders.ALL)
-                .borderType(BorderType.ROUNDED)
-                .build(),
-            rows.get(4)
+        // Row 1: end time + purpose
+        var endPurposeRow = Layout.horizontal()
+            .constraints(Constraint.percentage(50), Constraint.percentage(50))
+            .split(rows.get(1));
+        endTimeInput.render(frame, endPurposeRow.get(0), focusedIndex == 2);
+        purposeInput.render(frame, endPurposeRow.get(1), focusedIndex == 3);
+
+        // Row 2: status block + select
+        var statusBlock = Block.builder()
+            .title(" Status ")
+            .borders(Borders.ALL)
+            .borderType(BorderType.ROUNDED)
+            .build();
+        frame.renderWidget(statusBlock, rows.get(2));
+        statusSelect.render(
+            statusBlock.inner(rows.get(2)),
+            frame.buffer(),
+            statusState
         );
-        statusSelect.render(rows.get(4), frame.buffer(), statusState);
+        // focus index 8 (handled separately)
 
-        researcherNameInput.render(frame, rows.get(5), false);
-        equipmentNameInput.render(frame, rows.get(6), false);
+        // Row 3: researcher + equipment name (display only)
+        var namesRow = Layout.horizontal()
+            .constraints(Constraint.percentage(50), Constraint.percentage(50))
+            .split(rows.get(3));
+        researcherNameInput.render(frame, namesRow.get(0), false);
+        equipmentNameInput.render(frame, namesRow.get(1), false);
 
-        createBookingBtn.render(frame, rows.get(7), focusedIndex == 6);
-        clearBookingBtn.render(frame, rows.get(8), focusedIndex == 7);
+        // Row 4: buttons
+        var buttonsRow = Layout.horizontal()
+            .constraints(Constraint.percentage(50), Constraint.percentage(50))
+            .split(rows.get(4));
+        createBookingBtn.render(frame, buttonsRow.get(0), focusedIndex == 4);
+        clearBookingBtn.render(frame, buttonsRow.get(1), focusedIndex == 5);
 
-        filterResearcher.render(frame, rows.get(9), focusedIndex == 4);
-        researcherArea = rows.get(10);
-        researcherTable.render(
-            frame,
-            researcherArea,
-            focusedIndex == widgets.size()
-        );
+        // Row 5: researcher filter
+        filterResearcher.render(frame, rows.get(5), focusedIndex == 6);
+        researcherArea = rows.get(6);
+        researcherTable.render(frame, researcherArea, focusedIndex == 9);
 
-        filterEquipment.render(frame, rows.get(11), focusedIndex == 5);
-        equipmentArea = rows.get(12);
-        equipmentTable.render(
-            frame,
-            equipmentArea,
-            focusedIndex == widgets.size()
-        );
+        // Row 7: equipment filter
+        filterEquipment.render(frame, rows.get(7), focusedIndex == 7);
+        equipmentArea = rows.get(8);
+        equipmentTable.render(frame, equipmentArea, focusedIndex == 10);
 
-        bookingArea = rows.get(13);
-        bookingTable.render(frame, bookingArea, focusedIndex == widgets.size());
+        // Row 9: booking table
+        bookingArea = rows.get(9);
+        bookingTable.render(frame, bookingArea, focusedIndex == 11);
 
         if (errorModal.isVisible()) errorModal.render(frame, area);
     }
@@ -286,37 +301,59 @@ public class CreateBooking {
         if (errorModal.isVisible()) return errorModal.handleEvent(event);
 
         if (event instanceof KeyEvent keyEvent) {
+            int totalFocusables = 12; // 0..11
+
             if (keyEvent.code() == KeyCode.DOWN) {
-                focusedIndex = (focusedIndex + 1) % (widgets.size() + 1);
+                focusedIndex = (focusedIndex + 1) % totalFocusables;
                 return true;
             } else if (keyEvent.code() == KeyCode.UP) {
                 focusedIndex =
-                    (focusedIndex + widgets.size()) % (widgets.size() + 1);
+                    (focusedIndex + totalFocusables - 1) % totalFocusables;
                 return true;
             }
 
-            if (focusedIndex < widgets.size()) {
-                boolean handled = widgets.get(focusedIndex).handleKey(keyEvent);
-                if (focusedIndex == 4) {
-                    if (keyEvent.code() == KeyCode.LEFT) {
-                        statusState.selectPrevious();
-                        return true;
-                    } else if (keyEvent.code() == KeyCode.RIGHT) {
-                        statusState.selectNext();
-                        return true;
-                    }
-                    refreshResearcherTable();
-                    return true;
-                }
-                if (focusedIndex == 5) {
-                    refreshEquipmentTable();
-                    return true;
-                }
-                return handled;
-            } else {
-                return false;
+            // Inputs
+            if (focusedIndex <= 3) {
+                return widgets.get(focusedIndex).handleKey(keyEvent);
             }
-        } else if (
+
+            // Status select
+            if (focusedIndex == 8) {
+                if (keyEvent.code() == KeyCode.LEFT) {
+                    statusState.selectPrevious();
+                    return true;
+                } else if (keyEvent.code() == KeyCode.RIGHT) {
+                    statusState.selectNext();
+                    return true;
+                }
+            }
+
+            // Buttons
+            if (focusedIndex == 4 || focusedIndex == 5) {
+                return widgets.get(focusedIndex).handleKey(keyEvent);
+            }
+
+            // Filters
+            if (focusedIndex == 6) {
+                boolean handled = filterResearcher.handleKey(keyEvent);
+                refreshResearcherTable();
+                return handled;
+            }
+            if (focusedIndex == 7) {
+                boolean handled = filterEquipment.handleKey(keyEvent);
+                refreshEquipmentTable();
+                return handled;
+            }
+
+            // Tables
+            if (focusedIndex == 9) return researcherTable.handleKey(keyEvent);
+            if (focusedIndex == 10) return equipmentTable.handleKey(keyEvent);
+            if (focusedIndex == 11) return bookingTable.handleKey(keyEvent);
+
+            return false;
+        }
+
+        if (
             event instanceof MouseEvent mouseEvent &&
             mouseEvent.button() == MouseButton.LEFT &&
             mouseEvent.isClick()
@@ -333,8 +370,14 @@ public class CreateBooking {
                 }
             }
 
+            if (filterResearcher.isClicked(mx, my)) {
+                focusedIndex = 6;
+                refreshResearcherTable();
+                return true;
+            }
+
             if (researcherTable.isClicked(mx, my, researcherArea)) {
-                focusedIndex = widgets.size();
+                focusedIndex = 9;
                 int rowIndex = researcherTable.getRowIndexAt(
                     my,
                     researcherArea
@@ -348,8 +391,14 @@ public class CreateBooking {
                 return true;
             }
 
+            if (filterEquipment.isClicked(mx, my)) {
+                focusedIndex = 7;
+                refreshEquipmentTable();
+                return true;
+            }
+
             if (equipmentTable.isClicked(mx, my, equipmentArea)) {
-                focusedIndex = widgets.size();
+                focusedIndex = 10;
                 int rowIndex = equipmentTable.getRowIndexAt(my, equipmentArea);
                 if (rowIndex != -1) {
                     Equipment selected = equipmentTable.getSelectedItem();
@@ -361,7 +410,7 @@ public class CreateBooking {
             }
 
             if (bookingTable.isClicked(mx, my, bookingArea)) {
-                focusedIndex = widgets.size();
+                focusedIndex = 11;
                 int rowIndex = bookingTable.getRowIndexAt(my, bookingArea);
                 if (rowIndex != -1) {
                     Booking selected = bookingTable.getSelectedItem();
