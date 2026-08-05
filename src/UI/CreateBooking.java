@@ -19,13 +19,22 @@ import dev.tamboui.widgets.select.SelectState;
 import entities.Booking;
 import entities.Equipment;
 import entities.Researcher;
+import factories.BookingManager;
 import factories.EquipmentManager;
 import factories.ResearcherManager;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import validators.TimeValidator;
+import validators.bookingValidator;
 
 public class CreateBooking {
+
+    private Researcher bookingRes = new Researcher();
+    private Booking bookingObj = new Booking();
+    private Equipment bookingEq = new Equipment();
 
     private static final int STATUS_SELECT_INDEX = 99;
     private static final int RESEARCHER_TABLE_INDEX = 100;
@@ -205,8 +214,65 @@ public class CreateBooking {
             invalid = true;
         }
 
+        if (
+            !TimeValidator.ValidateOrder(
+                startTimeInput.getValue(),
+                endTimeInput.getValue()
+            )
+        ) {
+            errorModal.showError("Start time must be before end time");
+            invalid = true;
+        }
+
+        if (bookingRes != null || bookingEq != null) {
+            if (
+                bookingValidator.researcherConflictBooking(
+                    bookingEq,
+                    dateInput.getValue(),
+                    startTimeInput.getValue(),
+                    endTimeInput.getValue()
+                )
+            ) {
+                errorModal.showError(
+                    "There is a conflict of this equipment on this date and selection of times"
+                );
+                invalid = true;
+            }
+
+            if (bookingValidator.researcherNumBookings(bookingRes)) {
+                errorModal.showError(
+                    "A researcher cannot have more than 3 active bookings"
+                );
+                invalid = true;
+            }
+        } else {
+            errorModal.showError(
+                "A researcher and a piece of equipment must be selected"
+            );
+            invalid = true;
+        }
+        LocalDate today = LocalDate.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+        LocalDate parsedDate = LocalDate.parse(dateInput.getValue(), formatter);
+
+        if (parsedDate.isBefore(today)) {
+            errorModal.showError("Bookings cannot be made into the past");
+            invalid = true;
+        }
+
         if (!invalid) {
-            // TODO: implement booking creation logic
+            bookingObj = new Booking(
+                dateInput.getValue(),
+                startTimeInput.getValue(),
+                endTimeInput.getValue(),
+                purposeInput.getValue(),
+                Booking.ACTIVE,
+                bookingEq,
+                bookingRes
+            );
+
+            BookingManager man = new BookingManager();
+            man.save(bookingObj);
         }
         refreshBookingTable();
     }
@@ -219,7 +285,7 @@ public class CreateBooking {
         statusState.selectFirst();
         researcherNameInput.clear();
         equipmentNameInput.clear();
-        // TODO: reset booking object
+        bookingObj = new Booking();
     }
 
     public void render(Frame frame, Rect areaInput) {
@@ -383,9 +449,9 @@ public class CreateBooking {
                     researcherArea
                 );
                 if (rowIndex != -1) {
-                    Researcher selected = researcherTable.getSelectedItem();
-                    if (selected != null) {
-                        researcherNameInput.setValue(selected.getFullName());
+                    bookingRes = researcherTable.getSelectedItem();
+                    if (bookingRes != null) {
+                        researcherNameInput.setValue(bookingRes.getFullName());
                     }
                 }
                 return true;
@@ -395,9 +461,9 @@ public class CreateBooking {
                 focusedIndex = EQUIPMENT_TABLE_INDEX;
                 int rowIndex = equipmentTable.getRowIndexAt(my, equipmentArea);
                 if (rowIndex != -1) {
-                    Equipment selected = equipmentTable.getSelectedItem();
-                    if (selected != null) {
-                        equipmentNameInput.setValue(selected.getName());
+                    this.bookingEq = equipmentTable.getSelectedItem();
+                    if (bookingEq != null) {
+                        equipmentNameInput.setValue(bookingEq.getName());
                     }
                 }
                 return true;

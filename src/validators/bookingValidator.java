@@ -6,24 +6,24 @@ import factories.BookingManager;
 
 public class bookingValidator {
 
-    boolean ValidateOS(Equipment eq) {
+    public static boolean ValidateOS(Equipment eq) {
         return eq.getStatus() == "Out of Service";
     }
 
-    boolean ValidateTimes(String start, String end) {
+    public static boolean ValidateTimes(String start, String end) {
         return TimeValidator.ValidateOrder(start, end);
     }
 
-    boolean researcherNumBookings(Researcher researcher) {
+    public static boolean researcherNumBookings(Researcher researcher) {
         // does backend lookup
         BookingManager man = new BookingManager();
-        if (man.checkNumBookings(researcher) >= 3) return false;
+        if (man.checkNumBookings(researcher) > 3) return false;
         else return true;
     }
 
     // searches for all bookings with this eq and checks theres no conflicting time slot
     // for the date
-    boolean researcherConflictBooking(
+    public static boolean researcherConflictBooking(
         Equipment eq,
         String date,
         String start,
