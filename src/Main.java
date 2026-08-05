@@ -1,3 +1,4 @@
+import UI.CreateBooking;
 import UI.CreateEquipment;
 import UI.CreateResearcher;
 import dev.tamboui.layout.Constraint;
@@ -30,6 +31,7 @@ public class Main {
         DbFactory.getFactory();
         CreateResearcher resPage = new CreateResearcher();
         CreateEquipment eqPage = new CreateEquipment();
+        CreateBooking bPage = new CreateBooking();
         tabsState.select(0);
 
         var config = TuiConfig.builder().mouseCapture(true).build();
@@ -51,13 +53,13 @@ public class Main {
                         }
                     }
 
-                    // Delegate events based on the currently active tab
                     if (tabsState.selected() == 0) {
                         return resPage.handleEvent(event);
                     } else if (tabsState.selected() == 1) {
                         return eqPage.handleEvent(event);
+                    } else if (tabsState.selected() == 2) {
+                        return bPage.handleEvent(event);
                     }
-
                     return false;
                 },
                 frame -> {
@@ -91,16 +93,7 @@ public class Main {
                     } else if (tabsState.selected() == 1) {
                         eqPage.render(frame, contentArea);
                     } else if (tabsState.selected() == 2) {
-                        var page = Paragraph.builder()
-                            .text(Text.from("Create Booking View"))
-                            .block(
-                                Block.builder()
-                                    .title("Create Booking")
-                                    .borders(Borders.ALL)
-                                    .build()
-                            )
-                            .build();
-                        frame.renderWidget(page, contentArea);
+                        bPage.render(frame, contentArea);
                     }
                 }
             );

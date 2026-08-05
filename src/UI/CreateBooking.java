@@ -6,7 +6,6 @@ import dev.tamboui.layout.Rect;
 import dev.tamboui.style.Color;
 import dev.tamboui.style.Style;
 import dev.tamboui.terminal.Frame;
-import dev.tamboui.text.Text;
 import dev.tamboui.tui.event.Event;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
@@ -15,13 +14,18 @@ import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.widgets.block.Block;
 import dev.tamboui.widgets.block.BorderType;
 import dev.tamboui.widgets.block.Borders;
-import dev.tamboui.widgets.paragraph.Paragraph;
+import dev.tamboui.widgets.scrollbar.Scrollbar;
+import dev.tamboui.widgets.scrollbar.ScrollbarOrientation;
+import dev.tamboui.widgets.scrollbar.ScrollbarState;
 import dev.tamboui.widgets.select.Select;
 import dev.tamboui.widgets.select.SelectState;
 import entities.Booking;
 import entities.Equipment;
 import entities.Researcher;
+import factories.EquipmentManager;
+import factories.ResearcherManager;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class CreateBooking {
@@ -68,13 +72,40 @@ public class CreateBooking {
     );
     private final InputBox equipmentNameInput = new InputBox(" Equipment ", "");
 
-    private final TableView<Researcher> researcherTable = new TableView<>(
-        "Researchers"
-    );
-    private final TableView<Equipment> equipmentTable = new TableView<>(
-        "Equipment"
-    );
-    private final TableView<Booking> bookingTable = new TableView<>("Bookings");
+    private final TableView<Researcher> researcherTable =
+        new TableView<Researcher>("Researchers")
+            .addColumn("ID", Constraint.length(8), r ->
+                String.valueOf(r.getResearchId())
+            )
+            .addColumn(
+                "Name",
+                Constraint.percentage(30),
+                Researcher::getFullName
+            );
+
+    private final TableView<Equipment> equipmentTable =
+        new TableView<Equipment>("Existing Equipment")
+            .addColumn("ID", Constraint.length(8), eq ->
+                String.valueOf(eq.getId())
+            )
+            .addColumn("Name", Constraint.percentage(30), Equipment::getName)
+            .addColumn("Status", Constraint.fill(), Equipment::getStatus);
+
+    private final TableView<Booking> bookingTable = new TableView<Booking>(
+        "Bookings"
+    )
+        .addColumn("ID", Constraint.length(8), b -> String.valueOf(b.getId()))
+        .addColumn("Date", Constraint.length(12), Booking::getDate)
+        .addColumn("Start", Constraint.length(8), Booking::getStartTime)
+        .addColumn("End", Constraint.length(8), Booking::getEndTime)
+        .addColumn("Purpose", Constraint.percentage(30), Booking::getPurpose)
+        .addColumn("Status", Constraint.length(10), Booking::getStatus)
+        .addColumn("Researcher", Constraint.percentage(20), b ->
+            b.getBookedBy() != null ? b.getBookedBy().getFullName() : ""
+        )
+        .addColumn("Equipment", Constraint.percentage(20), b ->
+            b.getBookedEQ() != null ? b.getBookedEQ().getName() : ""
+        );
 
     private final Button createBookingBtn = new Button(
         " Create Booking ",
@@ -99,18 +130,53 @@ public class CreateBooking {
         widgets.add(createBookingBtn);
         widgets.add(clearBookingBtn);
 
-        // TODO: add table columns for researcher, equipment, booking
         refreshResearcherTable();
         refreshEquipmentTable();
         refreshBookingTable();
     }
 
     public void refreshResearcherTable() {
-        // TODO: implement researcher manager logic
+        ResearcherManager man = new ResearcherManager();
+        String filterText =
+            filterResearcher.getValue() != null
+                ? filterResearcher.getValue().trim()
+                : "";
+
+        if (!filterText.isEmpty()) {
+            try {
+                Long searchId = Long.parseLong(filterText);
+                Researcher match = man.SearchResearcher(searchId);
+                researcherTable.setItems(
+                    match != null ? List.of(match) : Collections.emptyList()
+                );
+            } catch (NumberFormatException e) {
+                researcherTable.setItems(Collections.emptyList());
+            }
+        } else {
+            researcherTable.setItems(man.findAll());
+        }
     }
 
     public void refreshEquipmentTable() {
-        // TODO: implement equipment manager logic
+        EquipmentManager manager = new EquipmentManager();
+        String filterText =
+            filterEquipment.getValue() != null
+                ? filterEquipment.getValue().trim()
+                : "";
+
+        if (!filterText.isEmpty()) {
+            try {
+                Long searchId = Long.parseLong(filterText);
+                Equipment match = manager.searchEquipment(searchId);
+                equipmentTable.setItems(
+                    match != null ? List.of(match) : Collections.emptyList()
+                );
+            } catch (NumberFormatException e) {
+                equipmentTable.setItems(Collections.emptyList());
+            }
+        } else {
+            equipmentTable.setItems(manager.findAllEQ(false));
+        }
     }
 
     public void refreshBookingTable() {
@@ -145,8 +211,8 @@ public class CreateBooking {
         endTimeInput.clear();
         purposeInput.clear();
         statusState.selectFirst();
-        researcherNameLabel.setValue("");
-        equipmentNameLabel.setValue("");
+        researcherNameInput.clear();
+        equipmentNameInput.clear();
         // TODO: reset booking object
     }
 
@@ -161,11 +227,15 @@ public class CreateBooking {
                 Constraint.length(3), // end time
                 Constraint.length(3), // purpose
                 Constraint.length(3), // status
+                Constraint.length(3), // researcher name
+                Constraint.length(3), // equipment name
+                Constraint.length(3), // create booking button
+                Constraint.length(3), // clear booking button
                 Constraint.length(3), // researcher filter
+                Constraint.length(5), // researcher table
                 Constraint.length(3), // equipment filter
-                Constraint.length(3), // labels
-                Constraint.length(3), // buttons
-                Constraint.fill(1), // tables
+                Constraint.length(5), // equipment table
+                Constraint.fill(1), // booking table
             })
             .split(container.inner(area));
 
@@ -184,36 +254,29 @@ public class CreateBooking {
         );
         statusSelect.render(rows.get(4), frame.buffer(), statusState);
 
-        filterResearcher.render(frame, rows.get(5), focusedIndex == 4);
-        filterEquipment.render(frame, rows.get(6), focusedIndex == 5);
+        researcherNameInput.render(frame, rows.get(5), false);
+        equipmentNameInput.render(frame, rows.get(6), false);
 
-        researcherNameInput.render(frame, rows.get(7), false);
-        equipmentNameInput.render(frame, rows.get(7), false);
-
-        createBookingBtn.render(frame, rows.get(8), focusedIndex == 6);
+        createBookingBtn.render(frame, rows.get(7), focusedIndex == 6);
         clearBookingBtn.render(frame, rows.get(8), focusedIndex == 7);
 
-        var splitTables = Layout.horizontal()
-            .constraints(new Constraint[] {
-                Constraint.percentage(50),
-                Constraint.percentage(50),
-            })
-            .split(rows.get(9));
-
-        researcherArea = splitTables.get(0);
-        equipmentArea = splitTables.get(1);
+        filterResearcher.render(frame, rows.get(9), focusedIndex == 4);
+        researcherArea = rows.get(10);
         researcherTable.render(
             frame,
             researcherArea,
             focusedIndex == widgets.size()
         );
+
+        filterEquipment.render(frame, rows.get(11), focusedIndex == 5);
+        equipmentArea = rows.get(12);
         equipmentTable.render(
             frame,
             equipmentArea,
             focusedIndex == widgets.size()
         );
 
-        bookingArea = rows.get(9);
+        bookingArea = rows.get(13);
         bookingTable.render(frame, bookingArea, focusedIndex == widgets.size());
 
         if (errorModal.isVisible()) errorModal.render(frame, area);
