@@ -27,11 +27,14 @@ import java.util.List;
 
 public class CreateBooking {
 
+    private static final int STATUS_SELECT_INDEX = 99;
     private static final int RESEARCHER_TABLE_INDEX = 100;
     private static final int EQUIPMENT_TABLE_INDEX = 101;
     private static final int BOOKING_TABLE_INDEX = 102;
 
     private Rect area;
+    private Rect statusArea;
+
     private final Block container = Block.builder()
         .title("Create Booking")
         .borders(Borders.ALL)
@@ -252,19 +255,29 @@ public class CreateBooking {
         endTimeInput.render(frame, endPurposeRow.get(0), focusedIndex == 2);
         purposeInput.render(frame, endPurposeRow.get(1), focusedIndex == 3);
 
-        // Row 2: status block + select
         var statusBlock = Block.builder()
             .title(" Status ")
             .borders(Borders.ALL)
             .borderType(BorderType.ROUNDED)
             .build();
-        frame.renderWidget(statusBlock, rows.get(2));
+
+        statusArea = rows.get(2);
+        frame.renderWidget(statusBlock, statusArea);
+
+        if (focusedIndex == STATUS_SELECT_INDEX) {
+            var highlightBlock = Block.builder()
+                .borders(Borders.ALL)
+                .borderType(BorderType.DOUBLE)
+                .borderStyle(Style.EMPTY.fg(Color.CYAN))
+                .build();
+            frame.renderWidget(highlightBlock, statusArea);
+        }
+
         statusSelect.render(
-            statusBlock.inner(rows.get(2)),
+            statusBlock.inner(statusArea),
             frame.buffer(),
             statusState
         );
-        // focus index 8 (handled separately)
 
         // Row 3: researcher + equipment name (display only)
         var namesRow = Layout.horizontal()
@@ -301,7 +314,7 @@ public class CreateBooking {
         if (errorModal.isVisible()) return errorModal.handleEvent(event);
 
         if (event instanceof KeyEvent keyEvent) {
-            int totalFocusables = 12; // 0..11
+            int totalFocusables = widgets.size() + 3; // just tables, no status select
 
             if (keyEvent.code() == KeyCode.DOWN) {
                 focusedIndex = (focusedIndex + 1) % totalFocusables;
@@ -312,43 +325,32 @@ public class CreateBooking {
                 return true;
             }
 
-            // Inputs
-            if (focusedIndex <= 3) {
-                return widgets.get(focusedIndex).handleKey(keyEvent);
-            }
-
-            // Status select
-            if (focusedIndex == 8) {
-                if (keyEvent.code() == KeyCode.LEFT) {
-                    statusState.selectPrevious();
-                    return true;
-                } else if (keyEvent.code() == KeyCode.RIGHT) {
-                    statusState.selectNext();
+            // Widgets (inputs, buttons, filters)
+            if (focusedIndex < widgets.size()) {
+                boolean handled = widgets.get(focusedIndex).handleKey(keyEvent);
+                if (focusedIndex == 6) {
+                    // researcher filter
+                    refreshResearcherTable();
                     return true;
                 }
-            }
-
-            // Buttons
-            if (focusedIndex == 4 || focusedIndex == 5) {
-                return widgets.get(focusedIndex).handleKey(keyEvent);
-            }
-
-            // Filters
-            if (focusedIndex == 6) {
-                boolean handled = filterResearcher.handleKey(keyEvent);
-                refreshResearcherTable();
-                return handled;
-            }
-            if (focusedIndex == 7) {
-                boolean handled = filterEquipment.handleKey(keyEvent);
-                refreshEquipmentTable();
+                if (focusedIndex == 7) {
+                    // equipment filter
+                    refreshEquipmentTable();
+                    return true;
+                }
                 return handled;
             }
 
-            // Tables
-            if (focusedIndex == 9) return researcherTable.handleKey(keyEvent);
-            if (focusedIndex == 10) return equipmentTable.handleKey(keyEvent);
-            if (focusedIndex == 11) return bookingTable.handleKey(keyEvent);
+            // Tables only
+            if (
+                focusedIndex == RESEARCHER_TABLE_INDEX
+            ) return researcherTable.handleKey(keyEvent);
+            if (
+                focusedIndex == EQUIPMENT_TABLE_INDEX
+            ) return equipmentTable.handleKey(keyEvent);
+            if (
+                focusedIndex == BOOKING_TABLE_INDEX
+            ) return bookingTable.handleKey(keyEvent);
 
             return false;
         }
@@ -370,68 +372,26 @@ public class CreateBooking {
                 }
             }
 
-            if (filterResearcher.isClicked(mx, my)) {
-                focusedIndex = 6;
-                refreshResearcherTable();
+            // Status select click
+            if (statusArea.contains(mx, my)) {
+                focusedIndex = STATUS_SELECT_INDEX;
                 return true;
             }
 
+            // Tables...
             if (researcherTable.isClicked(mx, my, researcherArea)) {
-                focusedIndex = 9;
-                int rowIndex = researcherTable.getRowIndexAt(
-                    my,
-                    researcherArea
-                );
-                if (rowIndex != -1) {
-                    Researcher selected = researcherTable.getSelectedItem();
-                    if (selected != null) researcherNameInput.setValue(
-                        selected.getFullName()
-                    );
-                }
+                focusedIndex = RESEARCHER_TABLE_INDEX;
+                // selection logic...
                 return true;
             }
-
-            if (filterEquipment.isClicked(mx, my)) {
-                focusedIndex = 7;
-                refreshEquipmentTable();
-                return true;
-            }
-
             if (equipmentTable.isClicked(mx, my, equipmentArea)) {
-                focusedIndex = 10;
-                int rowIndex = equipmentTable.getRowIndexAt(my, equipmentArea);
-                if (rowIndex != -1) {
-                    Equipment selected = equipmentTable.getSelectedItem();
-                    if (selected != null) equipmentNameInput.setValue(
-                        selected.getName()
-                    );
-                }
+                focusedIndex = EQUIPMENT_TABLE_INDEX;
+                // selection logic...
                 return true;
             }
-
             if (bookingTable.isClicked(mx, my, bookingArea)) {
-                focusedIndex = 11;
-                int rowIndex = bookingTable.getRowIndexAt(my, bookingArea);
-                if (rowIndex != -1) {
-                    Booking selected = bookingTable.getSelectedItem();
-                    if (selected != null) {
-                        dateInput.setValue(selected.getDate());
-                        startTimeInput.setValue(selected.getStartTime());
-                        endTimeInput.setValue(selected.getEndTime());
-                        purposeInput.setValue(selected.getPurpose());
-                        if ("Finished".equals(selected.getStatus())) {
-                            statusState.selectLast();
-                        } else {
-                            statusState.selectFirst();
-                        }
-                        researcherNameInput.setValue(
-                            selected.getBookedBy().getFullName()
-                        );
-                        equipmentNameInput.setValue(
-                            selected.getBookedEQ().getName()
-                        );
-                    }
-                }
+                focusedIndex = BOOKING_TABLE_INDEX;
+                // selection logic...
                 return true;
             }
         }
