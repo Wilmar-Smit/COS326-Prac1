@@ -37,6 +37,8 @@ public class CreateEquipment {
         .padding(new Padding(1, 2, 1, 2))
         .build();
 
+    private boolean displayOutOfService = false;
+
     private final Constraint[] rowConstraints = new Constraint[] {
         Constraint.length(3), // Name
         Constraint.length(3), // Category
@@ -57,16 +59,15 @@ public class CreateEquipment {
     private final CheckboxState checkboxState = new CheckboxState();
     private final Checkbox checkbox = Checkbox.builder().build();
 
-    // Function called when checkbox toggled
     private void onCheckboxToggle() {
         if (checkboxState.isChecked()) {
-            System.out.println("Checkbox is ON");
+            displayOutOfService = true;
         } else {
-            System.out.println("Checkbox is OFF");
+            displayOutOfService = false;
         }
+        refreshTableData();
     }
 
-    // Inputs
     private final InputBox nameInput = new InputBox(
         " Equipment Name ",
         "Enter Equipment name..."
@@ -85,7 +86,6 @@ public class CreateEquipment {
     );
     private final InputBox filterID = new InputBox(" Search by ID ", "ID...");
 
-    // Status select
     private final SelectState statusState = new SelectState(
         Equipment.WORKING,
         Equipment.OUT_OF_SERVICE
@@ -98,7 +98,6 @@ public class CreateEquipment {
         .borderType(BorderType.ROUNDED)
         .build();
 
-    // Buttons
     private final Button createEQ = new Button(
         " Create Equipment ",
         this::createEquipmentFunction
@@ -112,7 +111,6 @@ public class CreateEquipment {
         this::deleteEquipment
     );
 
-    // Table
     private final TableView<Equipment> equipmentTable;
 
     private final List<UI> widgets = new ArrayList<>();
@@ -167,7 +165,9 @@ public class CreateEquipment {
                 equipmentTable.setItems(Collections.emptyList());
             }
         } else {
-            equipmentTable.setItems(manager.findAll());
+            equipmentTable.setItems(
+                manager.findAllEQ(this.displayOutOfService)
+            );
         }
     }
 
@@ -287,7 +287,23 @@ public class CreateEquipment {
         deleteEquipmentBtn.render(frame, rows.get(8), focusedIndex == 8);
 
         var checkboxArea = rows.get(9);
-        checkbox.render(checkboxArea, frame.buffer(), checkboxState);
+        var checkboxBlock = Block.builder()
+            .title(" Show out of Service ")
+            .borders(Borders.ALL)
+            .borderType(BorderType.ROUNDED)
+            .borderStyle(
+                focusedIndex == 9
+                    ? Style.EMPTY.fg(Color.CYAN)
+                    : Style.EMPTY.fg(Color.DARK_GRAY)
+            )
+            .build();
+
+        frame.renderWidget(checkboxBlock, checkboxArea);
+        checkbox.render(
+            checkboxBlock.inner(checkboxArea),
+            frame.buffer(),
+            checkboxState
+        );
 
         tableArea = rows.get(10);
         equipmentTable.render(frame, tableArea, focusedIndex == widgets.size());
@@ -299,7 +315,6 @@ public class CreateEquipment {
         if (errorModal.isVisible()) return errorModal.handleEvent(event);
 
         if (event instanceof KeyEvent keyEvent) {
-            // Navigation
             if (keyEvent.code() == KeyCode.DOWN) {
                 focusedIndex = (focusedIndex + 1) % (widgets.size() + 1); // +1 for table
                 return true;
@@ -309,7 +324,6 @@ public class CreateEquipment {
                 return true;
             }
 
-            // Delegate to focused widget
             if (focusedIndex < widgets.size()) {
                 boolean handled = widgets.get(focusedIndex).handleKey(keyEvent);
 
@@ -324,7 +338,6 @@ public class CreateEquipment {
                     }
                 }
 
-                // Refresh table when filter changes
                 if (focusedIndex == 5 && handled) {
                     refreshTableData();
                 }
@@ -342,7 +355,6 @@ public class CreateEquipment {
             int mx = mouseEvent.x();
             int my = mouseEvent.y();
 
-            // Normal widgets
             for (int i = 0; i < widgets.size(); i++) {
                 UI w = widgets.get(i);
                 if (w.isClicked(mx, my)) {
@@ -363,7 +375,6 @@ public class CreateEquipment {
                 return true;
             }
 
-            // Table hit-test
             if (equipmentTable.isClicked(mx, my, tableArea)) {
                 focusedIndex = widgets.size();
                 int rowIndex = equipmentTable.getRowIndexAt(my, tableArea);
