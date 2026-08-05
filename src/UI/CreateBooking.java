@@ -226,13 +226,19 @@ public class CreateBooking {
             invalid = true;
         }
 
-        if (bookingRes != null || bookingEq != null) {
+        if (
+            bookingRes != null &&
+            bookingEq != null &&
+            bookingRes.getResearchId() != null &&
+            bookingEq.getId() != null
+        ) {
             if (
                 bookingValidator.researcherConflictBooking(
                     bookingEq,
                     dateInput.getValue(),
                     startTimeInput.getValue(),
-                    endTimeInput.getValue()
+                    endTimeInput.getValue(),
+                    bookingObj // can be null when creating (used for updating)
                 )
             ) {
                 errorModal.showError(
@@ -319,9 +325,9 @@ public class CreateBooking {
                 Constraint.length(3), // researcher + equipment name (display only)
                 Constraint.length(3), // buttons row
                 Constraint.length(3), // researcher filter
-                Constraint.length(5), // researcher table
+                Constraint.length(10), // researcher table
                 Constraint.length(3), // equipment filter
-                Constraint.length(5), // equipment table
+                Constraint.length(10), // equipment table
                 Constraint.fill(1), // booking table
             })
             .split(container.inner(area));
@@ -397,7 +403,6 @@ public class CreateBooking {
 
     public boolean handleEvent(Event event) {
         if (errorModal.isVisible()) return errorModal.handleEvent(event);
-
         if (event instanceof KeyEvent keyEvent) {
             int totalFocusables = widgets.size() + 3;
 
@@ -413,16 +418,24 @@ public class CreateBooking {
             if (focusedIndex < widgets.size()) {
                 boolean handled = widgets.get(focusedIndex).handleKey(keyEvent);
                 if (focusedIndex == 6) {
-                    // researcher filter
                     refreshResearcherTable();
                     return true;
                 }
                 if (focusedIndex == 7) {
-                    // equipment filter
                     refreshEquipmentTable();
                     return true;
                 }
                 return handled;
+            }
+
+            if (focusedIndex == STATUS_SELECT_INDEX) {
+                if (keyEvent.code() == KeyCode.LEFT) {
+                    statusState.selectPrevious();
+                    return true;
+                } else if (keyEvent.code() == KeyCode.RIGHT) {
+                    statusState.selectNext();
+                    return true;
+                }
             }
 
             if (
@@ -507,12 +520,16 @@ public class CreateBooking {
                         } else {
                             statusState.selectFirst();
                         }
+
                         researcherNameInput.setValue(
                             selected.getBookedBy().getFullName()
                         );
+                        bookingRes = selected.getBookedBy();
+
                         equipmentNameInput.setValue(
                             selected.getBookedEQ().getName()
                         );
+                        bookingEq = selected.getBookedEQ();
                     }
                 }
                 if (bookingObj.getId() != null) {

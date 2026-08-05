@@ -38,7 +38,8 @@ public class BookingManager extends BaseManager<Booking> {
         Equipment eq,
         String date,
         String start,
-        String end
+        String end,
+        Booking booking
     ) {
         if (eq == null || eq.getId() == null) {
             return false;
@@ -52,7 +53,9 @@ public class BookingManager extends BaseManager<Booking> {
                     "WHERE b.bookedEQ = :eq " +
                     "AND b.date = :inputDate " +
                     "AND b.startTime < :newEnd " +
-                    "AND b.endTime > :newStart",
+                    "AND b.endTime > :newStart " +
+                    "AND b.status = 'Active'" +
+                    "AND b.id <> :bookingId",
                 Long.class
             );
 
@@ -61,7 +64,12 @@ public class BookingManager extends BaseManager<Booking> {
             query.setParameter("newStart", start);
             query.setParameter("newEnd", end);
 
-            Long count = query.getSingleResult(); // always returns a number
+            query.setParameter(
+                "bookingId",
+                booking != null ? booking.getId() : -1
+            );
+
+            Long count = query.getSingleResult();
             return count > 0;
         } finally {
             man.close();

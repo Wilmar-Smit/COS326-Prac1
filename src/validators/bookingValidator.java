@@ -1,5 +1,6 @@
 package validators;
 
+import entities.Booking;
 import entities.Equipment;
 import entities.Researcher;
 import factories.BookingManager;
@@ -27,9 +28,10 @@ public class bookingValidator {
         Equipment eq,
         String date,
         String start,
-        String end
+        String end,
+        Booking booking
     ) {
         BookingManager man = new BookingManager();
-        return man.checkTimesConflict(eq, date, start, end);
+        return man.checkTimesConflict(eq, date, start, end, booking);
     }
 }
