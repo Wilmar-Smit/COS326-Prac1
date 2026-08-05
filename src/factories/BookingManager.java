@@ -48,7 +48,7 @@ public class BookingManager extends BaseManager<Booking> {
 
         try {
             TypedQuery<Long> query = man.createQuery(
-                "SELECT COUNT(b) FROM Booking b " +
+                "SELECT COUNT(b) FROM entities.Booking b " +
                     "WHERE b.bookedEQ = :eq " +
                     "AND b.date = :inputDate " +
                     "AND b.startTime < :newEnd " +
@@ -61,8 +61,8 @@ public class BookingManager extends BaseManager<Booking> {
             query.setParameter("newStart", start);
             query.setParameter("newEnd", end);
 
-            // If count > 0, at least one overlapping booking exists
-            return query.getSingleResult() > 0;
+            Long count = query.getSingleResult(); // always returns a number
+            return count > 0;
         } finally {
             man.close();
         }

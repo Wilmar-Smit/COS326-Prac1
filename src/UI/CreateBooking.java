@@ -124,6 +124,7 @@ public class CreateBooking {
         " Create Booking ",
         this::createBookingFunction
     );
+
     private final Button clearBookingBtn = new Button(
         " Clear Booking ",
         this::clearBooking
@@ -195,7 +196,8 @@ public class CreateBooking {
     }
 
     public void refreshBookingTable() {
-        // TODO: implement booking manager logic
+        BookingManager man = new BookingManager();
+        bookingTable.setItems(man.findAll());
     }
 
     private void createBookingFunction() {
@@ -239,7 +241,7 @@ public class CreateBooking {
                 invalid = true;
             }
 
-            if (bookingValidator.researcherNumBookings(bookingRes)) {
+            if (!bookingValidator.researcherNumBookings(bookingRes)) {
                 errorModal.showError(
                     "A researcher cannot have more than 3 active bookings"
                 );
@@ -261,18 +263,32 @@ public class CreateBooking {
         }
 
         if (!invalid) {
-            bookingObj = new Booking(
-                dateInput.getValue(),
-                startTimeInput.getValue(),
-                endTimeInput.getValue(),
-                purposeInput.getValue(),
-                Booking.ACTIVE,
-                bookingEq,
-                bookingRes
-            );
+            if (bookingObj.getId() == null) {
+                bookingObj = new Booking(
+                    dateInput.getValue(),
+                    startTimeInput.getValue(),
+                    endTimeInput.getValue(),
+                    purposeInput.getValue(),
+                    Booking.ACTIVE,
+                    bookingEq,
+                    bookingRes
+                );
 
-            BookingManager man = new BookingManager();
-            man.save(bookingObj);
+                BookingManager man = new BookingManager();
+                man.save(bookingObj);
+                createBookingBtn.setLabel("Update booking");
+            } else {
+                bookingObj.setBookedBy(bookingRes);
+                bookingObj.setDate(dateInput.getValue());
+                bookingObj.setStartTime(startTimeInput.getValue());
+                bookingObj.setEndTime(endTimeInput.getValue());
+                bookingObj.setBookedEQ(bookingEq);
+                bookingObj.setStatus(statusState.selectedValue());
+                bookingObj.setPurpose(purposeInput.getValue());
+
+                BookingManager man = new BookingManager();
+                man.update(bookingObj);
+            }
         }
         refreshBookingTable();
     }
@@ -286,6 +302,9 @@ public class CreateBooking {
         researcherNameInput.clear();
         equipmentNameInput.clear();
         bookingObj = new Booking();
+        bookingRes = new Researcher();
+        bookingEq = new Equipment();
+        createBookingBtn.setLabel("Create new Booking");
     }
 
     public void render(Frame frame, Rect areaInput) {
@@ -443,6 +462,7 @@ public class CreateBooking {
             }
 
             if (researcherTable.isClicked(mx, my, researcherArea)) {
+                refreshResearcherTable();
                 focusedIndex = RESEARCHER_TABLE_INDEX;
                 int rowIndex = researcherTable.getRowIndexAt(
                     my,
@@ -454,10 +474,12 @@ public class CreateBooking {
                         researcherNameInput.setValue(bookingRes.getFullName());
                     }
                 }
+
                 return true;
             }
 
             if (equipmentTable.isClicked(mx, my, equipmentArea)) {
+                refreshEquipmentTable();
                 focusedIndex = EQUIPMENT_TABLE_INDEX;
                 int rowIndex = equipmentTable.getRowIndexAt(my, equipmentArea);
                 if (rowIndex != -1) {
@@ -469,10 +491,12 @@ public class CreateBooking {
                 return true;
             }
             if (bookingTable.isClicked(mx, my, bookingArea)) {
+                refreshBookingTable();
                 focusedIndex = BOOKING_TABLE_INDEX;
                 int rowIndex = bookingTable.getRowIndexAt(my, bookingArea);
                 if (rowIndex != -1) {
                     Booking selected = bookingTable.getSelectedItem();
+                    this.bookingObj = selected;
                     if (selected != null) {
                         dateInput.setValue(selected.getDate());
                         startTimeInput.setValue(selected.getStartTime());
@@ -490,6 +514,9 @@ public class CreateBooking {
                             selected.getBookedEQ().getName()
                         );
                     }
+                }
+                if (bookingObj.getId() != null) {
+                    createBookingBtn.setLabel("Update booking");
                 }
                 return true;
             }
