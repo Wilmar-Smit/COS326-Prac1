@@ -271,7 +271,6 @@ public class CreateResearcher {
                 }
             }
 
-            // FIX: Split container.inner(area) using stored outer area instead of tableArea
             if (this.area != null) {
                 var container = Block.builder()
                     .title("Create Researcher")
@@ -303,7 +302,7 @@ public class CreateResearcher {
     }
 
     public void render(Frame frame, Rect area) {
-        this.area = area; // Sa
+        this.area = area;
 
         var container = Block.builder()
             .title("Create Researcher")
@@ -325,9 +324,7 @@ public class CreateResearcher {
         filterID.render(frame, rows.get(3), focusedIndex == 3);
         createResearcher.render(frame, rows.get(4), focusedIndex == 4);
         createNewResearcherBtn.render(frame, rows.get(5), focusedIndex == 5);
-        deleteResearcherBtn.render(frame, rows.get(6), focusedIndex == 6);
 
-        // Render Checkbox in Row 7
         var checkboxArea = rows.get(7);
         var checkboxBlock = Block.builder()
             .title(" Order by number of bookings ")
