@@ -22,7 +22,6 @@ import entities.Researcher;
 import factories.BookingManager;
 import factories.EquipmentManager;
 import factories.ResearcherManager;
-import java.sql.Time;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -217,6 +216,24 @@ public class CreateBooking {
 
     public void refreshBookingTable() {
         BookingManager man = new BookingManager();
+        ResearcherManager resMan = new ResearcherManager();
+
+        String filterText =
+            filterResearcher.getValue() != null
+                ? filterResearcher.getValue().trim()
+                : "";
+
+        if (!filterText.isEmpty()) {
+            try {
+                Long searchId = Long.parseLong(filterText);
+                Researcher res = resMan.SearchResearcher(searchId);
+                if (res != null) {
+                    bookingTable.setItems(man.getBookingRes(res));
+                    return;
+                }
+            } catch (NumberFormatException e) {}
+        }
+
         bookingTable.setItems(man.findAll());
     }
 
@@ -433,17 +450,14 @@ public class CreateBooking {
         clearBookingBtn.render(frame, buttonsRow.get(1), focusedIndex == 5);
         deleteBookingBtn.render(frame, buttonsRow.get(2), focusedIndex == 6);
 
-        // Row 5: researcher filter
         filterResearcher.render(frame, rows.get(5), focusedIndex == 7);
         researcherArea = rows.get(6);
         researcherTable.render(frame, researcherArea, focusedIndex == 9);
 
-        // Row 7: equipment filter
         filterEquipment.render(frame, rows.get(7), focusedIndex == 8);
         equipmentArea = rows.get(8);
         equipmentTable.render(frame, equipmentArea, focusedIndex == 10);
 
-        // Row 9: booking table
         bookingArea = rows.get(9);
         bookingTable.render(frame, bookingArea, focusedIndex == 11);
 
@@ -470,6 +484,7 @@ public class CreateBooking {
                 if (focusedIndex == 7) {
                     // researcher filter
                     refreshResearcherTable();
+                    refreshBookingTable();
                     return true;
                 }
                 if (focusedIndex == 8) {
@@ -520,7 +535,6 @@ public class CreateBooking {
                 }
             }
 
-            // Status select click
             if (statusArea.contains(mx, my)) {
                 focusedIndex = STATUS_SELECT_INDEX;
                 return true;
@@ -528,6 +542,7 @@ public class CreateBooking {
 
             if (researcherTable.isClicked(mx, my, researcherArea)) {
                 refreshResearcherTable();
+                refreshBookingTable();
                 focusedIndex = RESEARCHER_TABLE_INDEX;
                 int rowIndex = researcherTable.getRowIndexAt(
                     my,

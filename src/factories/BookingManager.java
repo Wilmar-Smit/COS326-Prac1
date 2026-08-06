@@ -3,6 +3,7 @@ package factories;
 import entities.Booking;
 import entities.Equipment;
 import entities.Researcher;
+import java.util.List;
 import javax.persistence.EntityManager;
 import javax.persistence.TypedQuery;
 
@@ -13,6 +14,21 @@ public class BookingManager extends BaseManager<Booking> {
 
     public BookingManager() {
         super(Booking.class);
+    }
+
+    public List<Booking> getBookingRes(Researcher researcher) {
+        EntityManager man = DbFactory.createManager();
+        try {
+            TypedQuery<Booking> query = man.createQuery(
+                "SELECT b FROM Booking b WHERE b.bookedBy = :res ",
+                Booking.class
+            );
+            query.setParameter("res", researcher);
+
+            return query.getResultList();
+        } finally {
+            man.close();
+        }
     }
 
     public int checkNumBookings(Researcher researcher) {
