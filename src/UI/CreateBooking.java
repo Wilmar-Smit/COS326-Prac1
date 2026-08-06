@@ -199,10 +199,13 @@ public class CreateBooking {
             try {
                 Long searchId = Long.parseLong(filterText);
                 Equipment match = manager.searchEquipment(searchId);
-                if (match.getStatus() != Equipment.OUT_OF_SERVICE) {
-                    equipmentTable.setItems(
-                        match != null ? List.of(match) : Collections.emptyList()
-                    );
+                if (
+                    match != null &&
+                    match.getStatus() != Equipment.OUT_OF_SERVICE
+                ) {
+                    equipmentTable.setItems(List.of(match));
+                } else {
+                    equipmentTable.setItems(Collections.emptyList());
                 }
             } catch (NumberFormatException e) {
                 equipmentTable.setItems(Collections.emptyList());
@@ -463,11 +466,14 @@ public class CreateBooking {
 
             if (focusedIndex < widgets.size()) {
                 boolean handled = widgets.get(focusedIndex).handleKey(keyEvent);
-                if (focusedIndex == 6) {
+
+                if (focusedIndex == 7) {
+                    // researcher filter
                     refreshResearcherTable();
                     return true;
                 }
-                if (focusedIndex == 7) {
+                if (focusedIndex == 8) {
+                    // equipment filter
                     refreshEquipmentTable();
                     return true;
                 }
