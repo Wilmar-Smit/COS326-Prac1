@@ -17,7 +17,7 @@ import dev.tamboui.widgets.block.Block;
 import dev.tamboui.widgets.block.BorderType;
 import dev.tamboui.widgets.block.Borders;
 
-public class ErrorModal  {
+public class ErrorModal {
 
     private String errorMessage = null;
     private final Button closeButton;
@@ -50,7 +50,7 @@ public class ErrorModal  {
                 return true;
             }
             closeButton.handleKey(keyEvent);
-            // Catch all key events while modal is visible so background inputs don't receive keypresses
+
             return true;
         } else if (event instanceof MouseEvent mouseEvent) {
             if (
@@ -72,8 +72,8 @@ public class ErrorModal  {
             return;
         }
 
-        int width = Math.min(50, fullArea.width());
-        int height = Math.min(10, fullArea.height());
+        int width = Math.min(100, fullArea.width());
+        int height = Math.min(20, fullArea.height());
         int x = fullArea.x() + (fullArea.width() - width) / 2;
         int y = fullArea.y() + (fullArea.height() - height) / 2;
 

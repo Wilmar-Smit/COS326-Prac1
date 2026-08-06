@@ -16,4 +16,19 @@ public class TimeValidator {
             return false;
         }
     }
+
+    public static boolean isValidDateFormat(String date) {
+        if (!date.matches("^\\d{4}/\\d{2}/\\d{2}$")) {
+            return false;
+        }
+
+        String[] parts = date.split("/");
+        int month = Integer.parseInt(parts[1]);
+        int day = Integer.parseInt(parts[2]);
+
+        if (month < 1 || month > 12) return false;
+        if (day < 1 || day > 31) return false;
+
+        return true;
+    }
 }

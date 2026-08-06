@@ -41,9 +41,10 @@ public class bookingValidator {
     public static boolean researchEqDateCheck(
         Equipment eq,
         String date,
-        Researcher res
+        Researcher res,
+        Booking booking
     ) {
         BookingManager man = new BookingManager();
-        return man.researchEqDateCheck(eq, date, res);
+        return man.researchEqDateCheck(eq, date, res, booking);
     }
 }

@@ -80,7 +80,8 @@ public class BookingManager extends BaseManager<Booking> {
     public boolean researchEqDateCheck(
         Equipment eq,
         String date,
-        Researcher res
+        Researcher res,
+        Booking booking
     ) {
         if (eq == null || eq.getId() == null) {
             return false;
@@ -93,13 +94,21 @@ public class BookingManager extends BaseManager<Booking> {
 
         try {
             TypedQuery<Long> query = man.createQuery(
-                "SELECT COUNT(b) FROM entities.Booking b WHERE b.date = :inputDate AND b.bookedEQ = :eq AND  b.bookedBy = :res",
+                "SELECT COUNT(b) FROM entities.Booking b WHERE b.date = :inputDate AND b.bookedEQ = :eq " +
+                    "AND  b.bookedBy = :res " +
+                    "AND b.id <> :bookingId ",
                 Long.class
             );
 
             query.setParameter("eq", eq);
             query.setParameter("inputDate", date);
             query.setParameter("res", res);
+
+            if (booking != null && booking.getId() != null) {
+                query.setParameter("bookingId", booking.getId());
+            } else {
+                query.setParameter("bookingId", -1);
+            }
 
             Long count = query.getSingleResult();
             // if count > 0 returns true -> means there is conflict

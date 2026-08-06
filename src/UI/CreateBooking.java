@@ -22,6 +22,7 @@ import entities.Researcher;
 import factories.BookingManager;
 import factories.EquipmentManager;
 import factories.ResearcherManager;
+import java.sql.Time;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -156,9 +157,9 @@ public class CreateBooking {
         widgets.add(purposeInput); // 3
         widgets.add(createBookingBtn); // 4
         widgets.add(clearBookingBtn); // 5
-        widgets.add(deleteBookingBtn);
-        widgets.add(filterResearcher); // 6
-        widgets.add(filterEquipment); // 7
+        widgets.add(deleteBookingBtn); //6
+        widgets.add(filterResearcher); // 7
+        widgets.add(filterEquipment); // 8
 
         refreshResearcherTable();
         refreshEquipmentTable();
@@ -219,15 +220,22 @@ public class CreateBooking {
     private void createBookingFunction() {
         boolean invalid = false;
 
+        if (!TimeValidator.isValidDateFormat(dateInput.getValue())) {
+            errorModal.showError(
+                "Date must be formatted yyyy/mm/dd \n with valid mm and dd"
+            );
+            invalid = true;
+        }
+
         if (!dateInput.getValue().matches("\\d{4}/\\d{2}/\\d{2}")) {
             errorModal.showError("Date format must be yyyy/mm/dd");
             invalid = true;
         }
-        if (!startTimeInput.getValue().matches("\\d{2}:\\d{2}")) {
+        if (!TimeValidator.ValidateFormat(startTimeInput.getValue())) {
             errorModal.showError("Start time format must be hh:mm");
             invalid = true;
         }
-        if (!endTimeInput.getValue().matches("\\d{2}:\\d{2}")) {
+        if (!TimeValidator.ValidateFormat(endTimeInput.getValue())) {
             errorModal.showError("End time format must be hh:mm");
             invalid = true;
         }
@@ -252,7 +260,8 @@ public class CreateBooking {
                 bookingValidator.researchEqDateCheck(
                     bookingEq,
                     dateInput.getValue(),
-                    bookingRes
+                    bookingRes,
+                    bookingObj
                 )
             ) {
                 errorModal.showError(
@@ -288,15 +297,22 @@ public class CreateBooking {
             );
             invalid = true;
         }
-        LocalDate today = LocalDate.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd");
-        LocalDate parsedDate = LocalDate.parse(dateInput.getValue(), formatter);
 
-        if (parsedDate.isBefore(today)) {
-            errorModal.showError("Bookings cannot be made into the past");
-            invalid = true;
+        if (!invalid && TimeValidator.isValidDateFormat(dateInput.getValue())) {
+            LocalDate today = LocalDate.now();
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern(
+                "yyyy/MM/dd"
+            );
+            LocalDate parsedDate = LocalDate.parse(
+                dateInput.getValue(),
+                formatter
+            );
+
+            if (parsedDate.isBefore(today)) {
+                errorModal.showError("Bookings cannot be made into the past");
+                invalid = true;
+            }
         }
-
         if (!invalid) {
             if (bookingObj.getId() == null) {
                 bookingObj = new Booking(
