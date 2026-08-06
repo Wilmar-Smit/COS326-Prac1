@@ -75,4 +75,36 @@ public class BookingManager extends BaseManager<Booking> {
             man.close();
         }
     }
+
+    public boolean researchEqDateCheck(
+        Equipment eq,
+        String date,
+        Researcher res
+    ) {
+        if (eq == null || eq.getId() == null) {
+            return false;
+        }
+        if (res == null || res.getResearchId() == null) {
+            return false;
+        }
+
+        EntityManager man = DbFactory.createManager();
+
+        try {
+            TypedQuery<Long> query = man.createQuery(
+                "SELECT COUNT(b) FROM entities.Booking b WHERE b.date = :inputDate AND b.bookedEQ = :eq AND  b.bookedBy = :res",
+                Long.class
+            );
+
+            query.setParameter("eq", eq);
+            query.setParameter("inputDate", date);
+            query.setParameter("res", res);
+
+            Long count = query.getSingleResult();
+            // if count > 0 returns true -> means there is conflict
+            return count > 0;
+        } finally {
+            man.close();
+        }
+    }
 }

@@ -34,4 +34,15 @@ public class bookingValidator {
         BookingManager man = new BookingManager();
         return man.checkTimesConflict(eq, date, start, end, booking);
     }
+
+    /*
+    returns true if the user has that eq booked for the same day
+    */
+    public static boolean researchEqDateCheck(
+        Equipment eq,
+        String date,
+        Researcher res
+    ) {
+        BookingManager man = new BookingManager();
+    }
 }
