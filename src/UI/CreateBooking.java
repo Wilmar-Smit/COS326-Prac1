@@ -85,6 +85,16 @@ public class CreateBooking {
     );
     private final InputBox equipmentNameInput = new InputBox(" Equipment ", "");
 
+    private void deleteBooking() {
+        if (bookingObj != null && bookingObj.getId() != null) {
+            BookingManager man = new BookingManager();
+            man.delete(bookingObj);
+            refreshBookingTable();
+        } else {
+            errorModal.showError("Please select a booking to delete first");
+        }
+    }
+
     private final TableView<Researcher> researcherTable =
         new TableView<Researcher>("Researchers")
             .addColumn("ID", Constraint.length(8), r ->
@@ -130,6 +140,11 @@ public class CreateBooking {
         this::clearBooking
     );
 
+    private final Button deleteBookingBtn = new Button(
+        " cancel Booking ",
+        this::deleteBooking
+    );
+
     private final List<UI> widgets = new ArrayList<>();
     private int focusedIndex = 0;
     private Rect researcherArea, equipmentArea, bookingArea;
@@ -141,6 +156,7 @@ public class CreateBooking {
         widgets.add(purposeInput); // 3
         widgets.add(createBookingBtn); // 4
         widgets.add(clearBookingBtn); // 5
+        widgets.add(deleteBookingBtn);
         widgets.add(filterResearcher); // 6
         widgets.add(filterEquipment); // 7
 
@@ -345,14 +361,12 @@ public class CreateBooking {
             })
             .split(container.inner(area));
 
-        // Row 0: date + start time
         var dateStartRow = Layout.horizontal()
             .constraints(Constraint.percentage(50), Constraint.percentage(50))
             .split(rows.get(0));
         dateInput.render(frame, dateStartRow.get(0), focusedIndex == 0);
         startTimeInput.render(frame, dateStartRow.get(1), focusedIndex == 1);
 
-        // Row 1: end time + purpose
         var endPurposeRow = Layout.horizontal()
             .constraints(Constraint.percentage(50), Constraint.percentage(50))
             .split(rows.get(1));
@@ -383,27 +397,30 @@ public class CreateBooking {
             statusState
         );
 
-        // Row 3: researcher + equipment name (display only)
         var namesRow = Layout.horizontal()
             .constraints(Constraint.percentage(50), Constraint.percentage(50))
             .split(rows.get(3));
         researcherNameInput.render(frame, namesRow.get(0), false);
         equipmentNameInput.render(frame, namesRow.get(1), false);
 
-        // Row 4: buttons
         var buttonsRow = Layout.horizontal()
-            .constraints(Constraint.percentage(50), Constraint.percentage(50))
+            .constraints(
+                Constraint.percentage(33),
+                Constraint.percentage(33),
+                Constraint.percentage(34)
+            )
             .split(rows.get(4));
         createBookingBtn.render(frame, buttonsRow.get(0), focusedIndex == 4);
         clearBookingBtn.render(frame, buttonsRow.get(1), focusedIndex == 5);
+        deleteBookingBtn.render(frame, buttonsRow.get(2), focusedIndex == 6);
 
         // Row 5: researcher filter
-        filterResearcher.render(frame, rows.get(5), focusedIndex == 6);
+        filterResearcher.render(frame, rows.get(5), focusedIndex == 7);
         researcherArea = rows.get(6);
         researcherTable.render(frame, researcherArea, focusedIndex == 9);
 
         // Row 7: equipment filter
-        filterEquipment.render(frame, rows.get(7), focusedIndex == 7);
+        filterEquipment.render(frame, rows.get(7), focusedIndex == 8);
         equipmentArea = rows.get(8);
         equipmentTable.render(frame, equipmentArea, focusedIndex == 10);
 

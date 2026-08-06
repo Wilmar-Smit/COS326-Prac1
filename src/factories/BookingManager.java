@@ -64,10 +64,11 @@ public class BookingManager extends BaseManager<Booking> {
             query.setParameter("newStart", start);
             query.setParameter("newEnd", end);
 
-            query.setParameter(
-                "bookingId",
-                booking != null ? booking.getId() : -1
-            );
+            if (booking != null && booking.getId() != null) {
+                query.setParameter("bookingId", booking.getId());
+            } else {
+                query.setParameter("bookingId", -1);
+            }
 
             Long count = query.getSingleResult();
             return count > 0;
