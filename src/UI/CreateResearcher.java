@@ -15,13 +15,30 @@ import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.widgets.block.Block;
 import dev.tamboui.widgets.block.BorderType;
 import dev.tamboui.widgets.block.Borders;
+import dev.tamboui.widgets.checkbox.Checkbox;
+import dev.tamboui.widgets.checkbox.CheckboxState;
 import entities.Researcher;
 import factories.ResearcherManager;
+import factories.ResearcherManager.ResearcherWithBookings;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 public class CreateResearcher {
+
+    private Rect area;
+    private final CheckboxState checkboxState = new CheckboxState();
+    private final Checkbox checkbox = Checkbox.builder().build();
+    private boolean orderByNumBookings = false;
+
+    private void onCheckboxToggle() {
+        if (checkboxState.isChecked()) {
+            orderByNumBookings = true;
+        } else {
+            orderByNumBookings = false;
+        }
+        refreshTableData();
+    }
 
     private final ErrorModal errorModal = new ErrorModal();
     private Researcher res;
@@ -54,6 +71,7 @@ public class CreateResearcher {
     );
 
     private final TableView<Researcher> researcherTable;
+    private final TableView<ResearcherWithBookings> researcherBookingsTable;
 
     private final List<UI> widgets = new ArrayList<>();
     private int focusedIndex = 0;
@@ -78,6 +96,19 @@ public class CreateResearcher {
                 Researcher::getDepartment
             );
 
+        researcherBookingsTable = new TableView<ResearcherWithBookings>(
+            "Researchers with Bookings"
+        )
+            .addColumn("Name", Constraint.percentage(30), rwb ->
+                rwb.researcher.getFullName()
+            )
+            .addColumn("Email", Constraint.percentage(35), rwb ->
+                rwb.researcher.getEmail()
+            )
+            .addColumn("Bookings", Constraint.fill(), rwb ->
+                String.valueOf(rwb.bookingCount)
+            );
+
         widgets.add(nameInput);
         widgets.add(emailInput);
         widgets.add(departmentInput);
@@ -88,6 +119,19 @@ public class CreateResearcher {
 
         refreshTableData();
     }
+
+    private final Constraint[] rowConstraints = new Constraint[] {
+        Constraint.length(3), // 0: Name Input
+        Constraint.length(3), // 1: Email Input
+        Constraint.length(3), // 2: Department Input
+        Constraint.length(3), // 3: Filter ID Input
+        Constraint.length(3), // 4: Create / Update Button
+        Constraint.length(3), // 5: Clear Button
+        Constraint.length(3), // 6: Delete Button
+        Constraint.length(3), // 7: Checkbox
+        Constraint.length(10), // 8: Table View (researcherTable)
+        Constraint.length(10), // 9: Table View (researcherBookingsTable)
+    };
 
     public void refreshTableData() {
         ResearcherManager man = new ResearcherManager();
@@ -107,6 +151,11 @@ public class CreateResearcher {
         } else {
             researcherTable.setItems(man.findAll());
         }
+
+        List<ResearcherWithBookings> withBookings = man.findAllResearchers(
+            this.orderByNumBookings
+        );
+        researcherBookingsTable.setItems(withBookings);
     }
 
     public void deleteResearcher() {
@@ -186,7 +235,7 @@ public class CreateResearcher {
 
         if (event instanceof KeyEvent keyEvent) {
             if (keyEvent.code() == KeyCode.DOWN) {
-                focusedIndex = (focusedIndex + 1) % (widgets.size() + 1); // +1 for table
+                focusedIndex = (focusedIndex + 1) % (widgets.size() + 1);
                 return true;
             } else if (keyEvent.code() == KeyCode.UP) {
                 focusedIndex =
@@ -194,11 +243,9 @@ public class CreateResearcher {
                 return true;
             }
 
-            // Delegate to focused widget
             if (focusedIndex < widgets.size()) {
                 boolean handled = widgets.get(focusedIndex).handleKey(keyEvent);
                 if (focusedIndex == 3 && handled) {
-                    // filterID refresh
                     refreshTableData();
                 }
                 return handled;
@@ -212,27 +259,42 @@ public class CreateResearcher {
             mouseEvent.button() == MouseButton.LEFT &&
             mouseEvent.isClick()
         ) {
+            int mx = mouseEvent.x();
+            int my = mouseEvent.y();
+
             for (int i = 0; i < widgets.size(); i++) {
                 UI w = widgets.get(i);
-                if (w.isClicked(mouseEvent.x(), mouseEvent.y())) {
+                if (w.isClicked(mx, my)) {
                     focusedIndex = i;
                     if (w instanceof Button) ((Button) w).click();
                     return true;
                 }
             }
 
-            if (
-                researcherTable.isClicked(
-                    mouseEvent.x(),
-                    mouseEvent.y(),
-                    tableArea
-                )
-            ) {
+            // FIX: Split container.inner(area) using stored outer area instead of tableArea
+            if (this.area != null) {
+                var container = Block.builder()
+                    .title("Create Researcher")
+                    .borders(Borders.ALL)
+                    .borderType(BorderType.ROUNDED)
+                    .padding(new Padding(1, 2, 1, 2))
+                    .build();
+
+                var rows = Layout.vertical()
+                    .constraints(rowConstraints)
+                    .split(container.inner(this.area));
+
+                Rect checkboxArea = rows.get(7);
+                if (checkboxArea.contains(mx, my)) {
+                    checkboxState.toggle();
+                    onCheckboxToggle();
+                    return true;
+                }
+            }
+
+            if (researcherTable.isClicked(mx, my, tableArea)) {
                 focusedIndex = widgets.size();
-                int rowIndex = researcherTable.getRowIndexAt(
-                    mouseEvent.y(),
-                    tableArea
-                );
+                int rowIndex = researcherTable.getRowIndexAt(my, tableArea);
                 if (rowIndex != -1) populateFieldsFromSelectedRow();
                 return true;
             }
@@ -241,6 +303,8 @@ public class CreateResearcher {
     }
 
     public void render(Frame frame, Rect area) {
+        this.area = area; // Sa
+
         var container = Block.builder()
             .title("Create Researcher")
             .borders(Borders.ALL)
@@ -252,16 +316,7 @@ public class CreateResearcher {
         frame.renderWidget(container, area);
 
         var rows = Layout.vertical()
-            .constraints(new Constraint[] {
-                Constraint.length(3), // Name Input
-                Constraint.length(3), // Email Input
-                Constraint.length(3), // Department Input
-                Constraint.length(3), // Filter ID Input
-                Constraint.length(3), // Create / Update Button
-                Constraint.length(3), // Clear Button
-                Constraint.length(3), // Delete Button
-                Constraint.fill(1), // Table View
-            })
+            .constraints(rowConstraints)
             .split(container.inner(area));
 
         nameInput.render(frame, rows.get(0), focusedIndex == 0);
@@ -272,12 +327,34 @@ public class CreateResearcher {
         createNewResearcherBtn.render(frame, rows.get(5), focusedIndex == 5);
         deleteResearcherBtn.render(frame, rows.get(6), focusedIndex == 6);
 
-        tableArea = rows.get(7);
+        // Render Checkbox in Row 7
+        var checkboxArea = rows.get(7);
+        var checkboxBlock = Block.builder()
+            .title(" Order by number of bookings ")
+            .borders(Borders.ALL)
+            .borderType(BorderType.ROUNDED)
+            .borderStyle(
+                focusedIndex == 7
+                    ? Style.EMPTY.fg(Color.CYAN)
+                    : Style.EMPTY.fg(Color.DARK_GRAY)
+            )
+            .build();
+
+        frame.renderWidget(checkboxBlock, checkboxArea);
+        checkbox.render(
+            checkboxBlock.inner(checkboxArea),
+            frame.buffer(),
+            checkboxState
+        );
+
+        tableArea = rows.get(8);
         researcherTable.render(
             frame,
             tableArea,
             focusedIndex == widgets.size()
         );
+
+        researcherBookingsTable.render(frame, rows.get(9), false);
 
         if (errorModal.isVisible()) errorModal.render(frame, area);
     }
