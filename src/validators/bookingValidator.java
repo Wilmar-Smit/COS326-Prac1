@@ -44,5 +44,6 @@ public class bookingValidator {
         Researcher res
     ) {
         BookingManager man = new BookingManager();
+        return man.researchEqDateCheck(eq, date, res);
     }
 }

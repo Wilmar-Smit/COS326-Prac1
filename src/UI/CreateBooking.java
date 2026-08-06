@@ -233,6 +233,19 @@ public class CreateBooking {
             bookingEq.getId() != null
         ) {
             if (
+                bookingValidator.researchEqDateCheck(
+                    bookingEq,
+                    dateInput.getValue(),
+                    bookingRes
+                )
+            ) {
+                errorModal.showError(
+                    "This researcher has already booked this equipment today"
+                );
+                invalid = true;
+            }
+
+            if (
                 bookingValidator.researcherConflictBooking(
                     bookingEq,
                     dateInput.getValue(),
